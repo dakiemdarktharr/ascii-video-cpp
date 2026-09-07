@@ -90,7 +90,7 @@ ctest --test-dir build --output-on-failure
 ./build/ascii-video-cpp
 ```
 
-CMake requires 3.20+, Qt 6.2+ and OpenCV 4+. The Windows and Ubuntu CI jobs
+CMake requires 3.20+, Qt 6.2+ and OpenCV 4.x or 5.x. The Windows and Ubuntu CI jobs
 both configure a fresh build, compile with warnings treated as errors and run CTest.
 Ubuntu also decodes the checked-in demo assets.
 Ubuntu, macOS and MSVC have not been executed in the local Windows environment; see

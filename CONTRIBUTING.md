@@ -1,6 +1,6 @@
 # Contributing
 
-Use C++20, Qt6 Widgets, OpenCV 4 and an FFmpeg executable with libx264 and GIF support.
+Use C++20, Qt6 Widgets, OpenCV 4.x or 5.x and an FFmpeg executable with libx264 and GIF support.
 Keep changes focused and explain the observable behavior and tests in a pull request.
 
 Build a fresh directory and run CTest before submitting:
