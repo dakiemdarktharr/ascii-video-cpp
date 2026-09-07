@@ -103,7 +103,7 @@ Reproduce with `scripts/measure_memory.ps1`, then compare the CSV files with:
 - No API keys, tokens or personal absolute paths are intended in tracked files. Build output,
   temporary exports and measurements containing machine paths are ignored.
 - Hardware acceleration, audio passthrough, VFR timestamp preservation, a playback timeline,
-  an installer and ZIP export inside the app are not implemented.
+  and ZIP export inside the app are not implemented. Windows installer validation is recorded below.
 
 See [publication commands](PUBLISHING.md). The README describes the implemented behavior and
 links to live CI results rather than assuming a workflow succeeded.
@@ -123,3 +123,24 @@ fixtures or the benchmark above. FFmpeg fully decoded all three outputs without 
 The GIF samples the first 6 seconds at 8 FPS; GIF's centisecond timing rounds its measured
 playback duration to 6.01 seconds. The poster was visually inspected. Source notes in the
 asset directory distinguish the supplied animation from MIT-licensed synthetic media.
+
+## Windows installer 1.1.0
+
+A new Release build in `build-installer-check` passed configuration, compilation with warnings
+as errors, and all 14 Qt Test entries. NSIS 3.11 packages 151 PE files from 99 runtime packages.
+The bundle contains Qt's Windows/offscreen/image plugins and FFmpeg; no development PATH is needed.
+
+`scripts/test_installer.ps1` passed on Windows 11 x64:
+
+- Silent per-user installation into a path containing spaces; Start Menu shortcut and uninstall registration.
+- Installed GUI initialization, version command and graceful window close with only Windows on PATH.
+- No modules loaded from the MSYS2 development prefix.
+- All 14 Qt Test entries against installed DLLs/FFmpeg, covering image/video conversion, downloads and profile exports.
+- Silent uninstall removed application files, shortcut and registry entry while preserving a user-owned file.
+
+The initial smoke test incorrectly used MainWindowHandle for a hidden window. It now finds the
+Qt window by process ID/title and sends WM_CLOSE; the corrected end-to-end test passed.
+The interactive installer wizard was not manually clicked through. The installer is unsigned.
+NSIS emits warning 9000 for the requested generic filename Setup.exe (Windows compatibility shims);
+C++ compilation emitted no warnings. Windows/Ubuntu CI also runs for each packaging change, with
+Windows additionally building and testing an installer. See the live Actions run for its result.

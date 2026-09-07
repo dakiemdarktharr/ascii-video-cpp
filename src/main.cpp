@@ -1,15 +1,24 @@
 #include "MainWindow.hpp"
 #include <QApplication>
 #include <QCommandLineParser>
+#include <cstdio>
 #include <iostream>
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
 int main(int argc, char **argv) {
+#ifdef _WIN32
+    // GUI launches have no console; terminal launches keep redirected output or attach to the shell.
+    if (GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_UNKNOWN &&
+        AttachConsole(ATTACH_PARENT_PROCESS)) {
+        (void)freopen("CONOUT$", "w", stdout);
+        (void)freopen("CONOUT$", "w", stderr);
+    }
+#endif
     QApplication app(argc, argv);
     QCoreApplication::setApplicationName("ascii-video-cpp");
-    QCoreApplication::setApplicationVersion("1.0.0");
+    QCoreApplication::setApplicationVersion("1.1.0");
     cv::setNumThreads(1);
     QCommandLineParser parser;
     parser.setApplicationDescription(

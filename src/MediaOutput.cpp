@@ -1,6 +1,9 @@
 #include "MediaOutput.hpp"
+#include <QCoreApplication>
+#include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <cmath>
@@ -9,7 +12,15 @@
 namespace ascii {
 QString ffmpegExecutable() {
     const auto override = qEnvironmentVariable("ASCII_FFMPEG");
-    const auto path = override.isEmpty() ? QStandardPaths::findExecutable("ffmpeg") : override;
+    QString path = override;
+    if (path.isEmpty()) {
+#ifdef _WIN32
+        const auto bundled = QDir(QCoreApplication::applicationDirPath()).filePath("ffmpeg.exe");
+#else
+        const auto bundled = QDir(QCoreApplication::applicationDirPath()).filePath("ffmpeg");
+#endif
+        path = QFileInfo(bundled).isFile() ? bundled : QStandardPaths::findExecutable("ffmpeg");
+    }
     if (path.isEmpty())
         throw std::runtime_error("FFmpeg not found. Install it and add it to PATH or set ASCII_FFMPEG.");
     return path;

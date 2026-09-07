@@ -46,12 +46,21 @@ jobs:
             mingw-w64-x86_64-qt6-base
             mingw-w64-x86_64-opencv
             mingw-w64-x86_64-ffmpeg
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-nsis
       - name: Configure clean build
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
       - name: Build
         run: cmake --build build --parallel 4
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Package Windows installer
+        run: |
+          echo "MINGW_PACKAGE_PREFIX=$(cygpath -m /mingw64)" >> "$GITHUB_ENV"
+          python scripts/package_windows.py --build-dir build --output-dir build-package --prefix "$(cygpath -m /mingw64)" --skip-source-download
+      - name: Test installed application without developer PATH
+        shell: pwsh
+        run: ./scripts/test_installer.ps1 -PackageDir build-package -BuildDir build -MingwPrefix $env:MINGW_PACKAGE_PREFIX
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -59,3 +68,5 @@ jobs:
           path: |
             build/Testing/Temporary/LastTest.log
             build/test-results.*
+            build-package/installed-tests.txt
+            build-package/installed-version.txt

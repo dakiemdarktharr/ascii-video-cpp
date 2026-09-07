@@ -10,12 +10,30 @@ an external FFmpeg process writes H.264 MP4 and GIF.
 
 **GitHub displays the demo and stores the assets. GitHub does not run this C++ desktop application.**
 
-**Cài đặt hiện tại:** repository này cung cấp mã nguồn, chưa có bộ cài `Setup.exe` hay bản
-portable kèm đầy đủ thư viện. Bạn cần cài dependency và build **một lần**. Sau đó mở
-`ascii-video-cpp.exe` như một ứng dụng desktop; **không cần VS Code hoặc IDE để sử dụng**.
+**Cài trên Windows 10/11 x64:** tải [Setup.exe](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/Setup.exe),
+chạy bộ cài rồi mở **ASCII Video C++** trong Start Menu. Bộ cài kèm Qt, OpenCV và FFmpeg;
+không cần VS Code, compiler hay MSYS2 để dùng app.
 
-[Bắt đầu trên Windows](#build-on-windows) · [Cách sử dụng](#use-the-app) ·
-[Export cho GitHub Profile](#github-profile-export) · [Ubuntu](#build-on-ubuntu)
+[Cài bằng Setup.exe](#install-on-windows) · [Cách sử dụng](#use-the-app) ·
+[Export cho GitHub Profile](#github-profile-export) · [Build từ source](#build-on-windows) · [Ubuntu](#build-on-ubuntu)
+
+## Install on Windows
+
+1. Mở [Releases](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest) và tải **Setup.exe** trong Assets.
+   `Source code (zip)` là mã nguồn, không phải bộ cài.
+2. Chạy `Setup.exe`, chọn thư mục nếu cần, bấm **Install** rồi **Finish**.
+   Mặc định app cài cho tài khoản hiện tại, không cần quyền administrator.
+3. Mở **ASCII Video C++** từ Start Menu. Những lần sau chỉ cần mở lại shortcut này.
+4. Dùng **Import → Convert → Download** theo hướng dẫn dưới đây.
+5. Gỡ app trong **Settings → Apps → Installed apps → ASCII Video C++ → Uninstall**,
+   hoặc dùng shortcut **Uninstall** trong Start Menu. File do bạn tự lưu sẽ được giữ lại.
+
+Bộ cài chưa được ký bằng chứng thư code-signing, nên Windows có thể hiển thị cảnh báo
+nhà phát hành chưa xác định. Chỉ tải từ trang Releases của repository này; file `SHA256SUMS.txt`
+được cung cấp để đối chiếu bằng `Get-FileHash .\Setup.exe -Algorithm SHA256` trong PowerShell.
+
+Khi có bản mới, đóng app trước rồi chạy bộ cài mới vào cùng thư mục.
+Windows ARM64 và các phiên bản Windows cũ hơn chưa được kiểm thử.
 
 ## Use the app
 
@@ -57,6 +75,8 @@ ASCII; multi-byte Unicode glyphs are rejected. Columns are 8–320 and rows have
 resource guard. Default workers: 4. The UI allows 1–32 workers.
 
 ## Build on Windows
+
+Phần này dành cho người muốn tự build hoặc sửa mã nguồn. Người dùng bộ cài có thể bỏ qua.
 
 ### Cài lần đầu với MSYS2 / MinGW
 
@@ -297,11 +317,12 @@ There is no promised conversion speed and no synthetic performance score.
   using advertised frame counts, but streams without trustworthy counts have that limitation.
 - Stop is checked between local decode calls and during encoding/export. A blocked backend read
   or initial font/codec setup cannot be interrupted immediately.
-- No installer or standalone DLL bundle is supplied. Run with the build dependencies available.
+- Windows x64 has an unsigned installer with bundled runtime libraries. macOS/Linux installers are not supplied.
 
 ## License
 
 [MIT](LICENSE) for project code and the original synthetic demo media.
 The supplied-clip showcase has separate [source notes](assets/readme-demo/README.md);
 the MIT license does not cover its underlying third-party animation. Qt, OpenCV, FFmpeg and system fonts
-retain their own licenses. Review their redistribution terms when packaging binaries.
+retain their own licenses. The Windows binary bundle includes GPL-3.0-or-later FFmpeg components;
+see [packaging and source notices](packaging/README.md) and the notices installed with the app.
