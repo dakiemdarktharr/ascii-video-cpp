@@ -1,0 +1,14 @@
+{
+    "ascii_render_ms": 1012.6126000000002,
+    "atlas_ms": 159.8201,
+    "columns": 100,
+    "decode_ms": 141.76880000000006,
+    "encode_ms": 1057.0376,
+    "frames": 144,
+    "grayscale_resize_ms": 216.62519999999998,
+    "note": "Stage times include accumulated worker work and encoder waits; they overlap and are not additive.",
+    "peak_resident_slots": 8,
+    "processing_fps": 106.98542776748828,
+    "threads": 4,
+    "total_ms": 1345.9777
+}

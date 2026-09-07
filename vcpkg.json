@@ -1,0 +1,27 @@
+{
+  "name": "ascii-video-cpp",
+  "version-string": "1.0.0",
+  "dependencies": [
+    {
+      "name": "qtbase",
+      "default-features": false,
+      "features": [
+        "widgets",
+        "png",
+        "testlib",
+        "thread",
+        "pcre2"
+      ]
+    },
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        "ffmpeg",
+        "jpeg",
+        "png"
+      ]
+    }
+  ],
+  "builtin-baseline": "04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4"
+}

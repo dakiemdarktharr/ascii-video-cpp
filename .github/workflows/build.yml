@@ -1,0 +1,61 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  ubuntu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build qt6-base-dev libopencv-dev ffmpeg fonts-dejavu-core
+      - name: Configure clean build
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+      - name: Build
+        run: cmake --build build --parallel 4
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Check demo assets
+        run: |
+          ffprobe -v error -show_entries stream=width,height,r_frame_rate -of json assets/demo-ascii.mp4
+          ffmpeg -v error -i assets/demo.gif -f null -
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ubuntu-test-log
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build/test-results.*
+  windows:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-qt6-base
+            mingw-w64-x86_64-opencv
+            mingw-w64-x86_64-ffmpeg
+      - name: Configure clean build
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+      - name: Build
+        run: cmake --build build --parallel 4
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-test-log
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build/test-results.*
