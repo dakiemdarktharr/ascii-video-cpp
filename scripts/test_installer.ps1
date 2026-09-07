@@ -51,10 +51,22 @@ try {
     $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'ASCII Video C++\ASCII Video C++.lnk'
     if (!(Test-Path -LiteralPath $shortcut)) { throw 'Start Menu shortcut is missing.' }
     $version = Join-Path $package 'installed-version.txt'
-    $app = Start-Process -FilePath $exe -ArgumentList '--version' -RedirectStandardOutput $version -PassThru -Wait -WindowStyle Hidden
-    if ($app.ExitCode -ne 0 -or (Get-Content $version -Raw) -notmatch 'ascii-video-cpp 1\.1\.0') {
-        throw 'Installed app version check failed.'
+    $start = New-Object System.Diagnostics.ProcessStartInfo
+    $start.FileName = $exe
+    $start.Arguments = '--version'
+    $start.UseShellExecute = $false
+    $start.CreateNoWindow = $true
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $app = [System.Diagnostics.Process]::Start($start)
+    if (!$app.WaitForExit(20000)) { $app.Kill(); throw 'Version command timed out.' }
+    $versionText = $app.StandardOutput.ReadToEnd()
+    $versionError = $app.StandardError.ReadToEnd()
+    Set-Content -LiteralPath $version -Value $versionText
+    if ($app.ExitCode -ne 0 -or $versionText -notmatch 'ascii-video-cpp 1\.1\.0') {
+        throw "Installed app version check failed: exit $($app.ExitCode), $versionError"
     }
+    $app.Dispose()
     $app = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
     try {
         $deadline = (Get-Date).AddSeconds(20)
