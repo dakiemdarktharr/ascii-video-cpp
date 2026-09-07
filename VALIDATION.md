@@ -95,10 +95,10 @@ Reproduce with `scripts/measure_memory.ps1`, then compare the CSV files with:
 
 ## Publication and platform status
 
-- Git branch: `main`; initial release committed locally using the owner's supplied author identity.
-- No remote repository or successful push is claimed. Use `git rev-parse HEAD` for the local commit hash.
-- GitHub CLI is unauthenticated; publication still requires login to `dakiemdarktharr`.
-- Windows/Ubuntu GitHub Actions are defined but have not run remotely.
+- Published repository: [dakiemdarktharr/ascii-video-cpp](https://github.com/dakiemdarktharr/ascii-video-cpp), branch `main`.
+- Initial release commit `77f9216af8b772b03e76fe18e6f1f8ccb1770995` was pushed successfully.
+- Publication was authenticated as `dakiemdarktharr`; no credentials are stored in the repository.
+- Remote Windows/Ubuntu build results are available in [GitHub Actions](https://github.com/dakiemdarktharr/ascii-video-cpp/actions/workflows/build.yml).
 - Ubuntu, macOS and the MSVC/vcpkg build path were not executed locally; WSL is not installed.
 - No API keys, tokens or personal absolute paths are intended in tracked files. Build output,
   temporary exports and measurements containing machine paths are ignored.
@@ -106,4 +106,4 @@ Reproduce with `scripts/measure_memory.ps1`, then compare the CSV files with:
   an installer and ZIP export inside the app are not implemented.
 
 See [publication commands](PUBLISHING.md). The README describes the implemented behavior and
-does not claim a published release or CI success.
+links to live CI results rather than assuming a workflow succeeded.

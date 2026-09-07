@@ -1,28 +1,26 @@
-# Publish the prepared repository
+# Repository and updates
 
-The local repository uses `main` and contains the initial release commit.
-The author identity was supplied by the project owner. GitHub CLI remains unauthenticated;
-no remote repository or successful push is claimed.
+The project is published at [dakiemdarktharr/ascii-video-cpp](https://github.com/dakiemdarktharr/ascii-video-cpp)
+on `main`. The initial release commit is
+`77f9216af8b772b03e76fe18e6f1f8ccb1770995`, authored with the identity supplied by the project owner.
 
-Run these commands from this repository in PowerShell after putting Git and GitHub CLI on PATH:
+For future updates, run the build and tests in README, inspect the changes, then use a normal push:
 
 ```powershell
-gh auth login
-gh api user --jq .login
 git status
-git log -1 --format=fuller
-gh repo create dakiemdarktharr/ascii-video-cpp --public --source=. --remote=origin --push
-git rev-parse HEAD
-gh repo view --json url --jq .url
+git diff
+git add .
+git diff --cached --check
+git diff --cached
+git commit -m "Describe the change"
+git push origin main
 gh run list --branch main
 gh run watch --exit-status
-gh repo view --web
 ```
 
-Confirm that the authenticated account is `dakiemdarktharr` before creating the repository.
-`gh repo create` fails if a repository with that name already exists. It does not overwrite it.
-In that case inspect the existing repository before choosing a different name or connecting a remote.
-There is no force push in this procedure. Do not continue past a failed push.
+Use `gh auth status` to inspect CLI authentication. If credentials are unavailable, run
+`gh auth login` and confirm that `gh api user --jq .login` reports the intended account.
+Never commit credentials or use force push for this workflow.
 
-After the workflow completes, inspect README's GIF, poster and MP4 links in GitHub.
-The workflow has not run remotely until the repository is pushed.
+[GitHub Actions](https://github.com/dakiemdarktharr/ascii-video-cpp/actions/workflows/build.yml)
+is the source for remote build status. After updates, inspect README's GIF, poster and MP4 links.
