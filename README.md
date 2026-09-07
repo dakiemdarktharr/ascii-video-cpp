@@ -1,8 +1,8 @@
 # ascii-video-cpp
 
-![ASCII animation demo](assets/demo.gif)
+![ASCII animation converted from the supplied project clip](assets/readme-demo/preview.gif)
 
-[Watch or download the full MP4](assets/demo-ascii.mp4) · [Poster](assets/preview.png) · [Original test pattern](assets/demo-source.png)
+[Watch or download the full MP4](assets/readme-demo/ascii-video.mp4) · [Poster](assets/readme-demo/poster.png) · [Demo source notes](assets/readme-demo/README.md)
 
 A C++20 desktop app that converts local images and videos into rendered ASCII art.
 Qt6 Widgets provides a terminal-style window; OpenCV decodes and prepares frames;
@@ -10,20 +10,41 @@ an external FFmpeg process writes H.264 MP4 and GIF.
 
 **GitHub displays the demo and stores the assets. GitHub does not run this C++ desktop application.**
 
+**Cài đặt hiện tại:** repository này cung cấp mã nguồn, chưa có bộ cài `Setup.exe` hay bản
+portable kèm đầy đủ thư viện. Bạn cần cài dependency và build **một lần**. Sau đó mở
+`ascii-video-cpp.exe` như một ứng dụng desktop; **không cần VS Code hoặc IDE để sử dụng**.
+
+[Bắt đầu trên Windows](#build-on-windows) · [Cách sử dụng](#use-the-app) ·
+[Export cho GitHub Profile](#github-profile-export) · [Ubuntu](#build-on-ubuntu)
+
 ## Use the app
 
-1. **Import** an image/video, or drop one local file into the window.
-2. Set columns, brightness, contrast, charset, text color, source colors, worker count and preview FPS.
-3. **Convert**. The preview updates during processing. **Stop** cancels the current conversion.
-4. **Download** saves `ascii-image.png` or `ascii-video.mp4`.
-5. **GitHub Profile** creates a folder of assets and a README snippet. It never uploads files.
+Sau khi mở app theo hướng dẫn bên dưới:
 
-The window shows input dimensions/type, video duration/FPS, progress, processing FPS,
-elapsed time, frame count and output size. Import, conversion, download and profile export
-run outside the UI thread. A conversion must finish before Download/Profile is enabled.
-On failure or cancellation, no partial conversion is published as the finished output.
+1. **Import:** chọn ảnh hoặc MP4/video, hoặc kéo một file vào cửa sổ. Kiểm tra tên file,
+   kích thước và FPS/thời lượng hiển thị. Nút Convert chỉ bật khi import thành công.
+2. **Chỉnh thông số trước khi convert:** có thể giữ mặc định để thử lần đầu.
 
-The default charset is ` .:-=+*#%@`, from dark to bright. Brightness is an additive
+   - **Columns:** số cột ký tự; nhiều cột cho thêm chi tiết nhưng tốn thời gian và dung lượng hơn.
+   - **Brightness / Contrast:** mặc định 0 / 1. Tăng brightness nếu ảnh ASCII quá tối.
+   - **Charset:** chuỗi từ ký tự thưa đến dày, mặc định ` .:-=+*#%@`.
+   - **Text:** chọn màu chữ xanh, trắng hoặc xám; bật **Source colors** để lấy màu từ video gốc.
+   - **Threads:** số worker CPU, mặc định 4. **Preview FPS** chỉ điều chỉnh tần suất preview,
+     không thay đổi FPS của MP4 xuất ra.
+
+3. **Convert:** bắt đầu xử lý. Xem preview, progress, FPS xử lý, thời gian đã chạy và dung lượng
+   output ở cuối cửa sổ. **Stop** hủy tác vụ đang chạy; bản chuyển đổi dở không được coi là thành phẩm.
+4. **Download:** sau khi hoàn tất, chọn nơi lưu và tên file. Tên mặc định cho ảnh là `ascii-image.png`;
+   video xuất thành `ascii-video.mp4` đầy đủ. Video ASCII hiện **không có âm thanh**.
+5. **GitHub Profile:** chọn thời lượng GIF preview, giới hạn dung lượng và repository URL nếu có,
+   rồi chọn thư mục cha. App tạo `github-export/` cùng snippet để bạn tự upload.
+   Thư mục `github-export/` phải chưa tồn tại ở vị trí đó.
+
+**Lưu trước khi đóng:** kết quả nằm trong thư mục tạm của app cho đến khi bạn dùng Download
+hoặc GitHub Profile. Đóng app sẽ xóa bản tạm. Preview chạy khi chuyển đổi; khi xong app hiển thị
+poster, chưa có thanh tua/phát lại. Mở MP4 đã Download bằng trình phát video để xem toàn bộ.
+
+Import, conversion, download and profile export run outside the UI thread. Brightness is an additive
 offset in [-255,255]; contrast in [0,4] is applied around gray 127.5 before clamping.
 The 8×16 glyph cell gives:
 
@@ -37,23 +58,79 @@ resource guard. Default workers: 4. The UI allows 1–32 workers.
 
 ## Build on Windows
 
-### MSYS2 / MinGW (locally tested)
+### Cài lần đầu với MSYS2 / MinGW
 
-Install [MSYS2](https://www.msys2.org/), then run these commands in its **MINGW64** shell:
+Đây là đường build đã được kiểm tra local và trong Windows CI.
+
+**1. Cài MSYS2.** Tải từ [msys2.org](https://www.msys2.org/), cài đặt, rồi mở
+**MSYS2 MINGW64** từ Start Menu. Các lệnh trong những khối `sh` dưới đây chạy trong
+cửa sổ MINGW64, không dán trực tiếp vào PowerShell.
+
+Cập nhật hệ thống:
 
 ```sh
 pacman -Syu
-pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake \
+```
+
+Nếu MSYS2 yêu cầu đóng cửa sổ để cập nhật, làm theo hướng dẫn, mở lại **MINGW64** rồi chạy
+`pacman -Syu` lần nữa đến khi cập nhật xong.
+
+**2. Cài compiler, Qt6, OpenCV, CMake và FFmpeg:**
+
+```sh
+pacman -S --needed git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake \
   mingw-w64-x86_64-ninja mingw-w64-x86_64-qt6-base \
   mingw-w64-x86_64-opencv mingw-w64-x86_64-ffmpeg
+```
+
+**3. Tải source, build và chạy test:**
+
+```sh
+git clone https://github.com/dakiemdarktharr/ascii-video-cpp.git
+cd ascii-video-cpp
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 4
 ctest --test-dir build --output-on-failure
+```
+
+Nếu đã dùng **Code → Download ZIP**, giải nén trước rồi dùng `cd` vào thư mục chứa
+`CMakeLists.txt`; bỏ qua hai dòng `git clone` và `cd ascii-video-cpp`.
+Chỉ chuyển sang bước mở app khi build thành công. Test thành công sẽ báo `100% tests passed`.
+
+**4. Mở app:**
+
+```sh
 ./build/ascii-video-cpp.exe
 ```
 
-Keep the matching MinGW DLL directory on PATH when launching from PowerShell or Explorer.
-Do not mix MSVC Qt/OpenCV libraries with MinGW executables.
+Một cửa sổ desktop sẽ mở. Không cần mở VS Code hay Visual Studio.
+
+### Mở lại app những lần sau
+
+Không cần cài hay build lại nếu source chưa thay đổi. Mở **MINGW64**, `cd` vào repository
+và chạy `./build/ascii-video-cpp.exe`.
+
+Hoặc mở PowerShell tại thư mục repository và chạy:
+
+```powershell
+$env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
+.\build\ascii-video-cpp.exe
+```
+
+Nếu MSYS2 được cài ở chỗ khác, thay `C:\msys64` bằng thư mục cài thực tế.
+Dòng PATH chỉ áp dụng cho cửa sổ PowerShell hiện tại. Không copy riêng file EXE sang máy khác:
+app còn cần các DLL của Qt/OpenCV/MinGW, Qt platform plugin và chương trình FFmpeg.
+
+### Lỗi thường gặp
+
+| Hiện tượng | Cách xử lý |
+| --- | --- |
+| `cmake`, `g++` hoặc `ninja` không được nhận diện | Mở đúng **MSYS2 MINGW64** và hoàn tất bước cài dependency. |
+| Thiếu DLL hoặc Qt platform plugin khi mở EXE | Chạy từ MINGW64, hoặc dùng lệnh PowerShell có PATH ở trên. Không trộn thư viện MSVC với MinGW. |
+| App báo không tìm thấy FFmpeg | Chạy `ffmpeg -version` trong cùng shell; cài package FFmpeg ở bước 2 nếu thiếu. |
+| Không mở được video/codec | Thử video MP4 H.264; kiểm tra file có phát được bằng trình phát video. Codec hỗ trợ phụ thuộc backend được cài. |
+| Export báo `github-export already exists` | Chọn thư mục cha khác hoặc đổi tên thư mục export cũ trước. |
+| GIF vượt giới hạn dung lượng | Giảm preview xuống 5–8 giây hoặc tăng ngân sách trong hộp thoại export. |
 
 ### MSVC + vcpkg manifest (provided, not locally built)
 
@@ -83,7 +160,9 @@ A missing executable/codec produces an error instead of a silent fallback to a d
 
 ```sh
 sudo apt-get update
-sudo apt-get install -y cmake ninja-build g++ qt6-base-dev libopencv-dev ffmpeg fonts-dejavu-core
+sudo apt-get install -y git cmake ninja-build g++ qt6-base-dev libopencv-dev ffmpeg fonts-dejavu-core
+git clone https://github.com/dakiemdarktharr/ascii-video-cpp.git
+cd ascii-video-cpp
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 4
 ctest --test-dir build --output-on-failure
@@ -169,6 +248,13 @@ The UI mailbox holds only the latest progress frame. FFmpeg's queued stdin is ca
 256 KiB plus one row. Decoder/codec caches, worker scratch, the poster and preview add a fixed
 amount outside the ring. Memory depends on resolution/settings, not a retained list of all frames.
 
+## Video length
+
+Không có giới hạn cứng theo phút/giờ cho MP4 đầu vào. Thời gian xử lý và dung lượng ổ đĩa
+là giới hạn thực tế; pipeline không giữ toàn bộ video trong RAM. Bản hiện tại đã được đo
+với input dài đến 120 giây, chưa có cam kết cho video dài nhiều giờ. Timeout của encoder
+bảo vệ khi ghi bị kẹt hoặc hoàn tất quá lâu. Giới hạn 15 giây chỉ dành cho GIF preview.
+
 ## Tests, demo and benchmarks
 
 ```sh
@@ -180,7 +266,10 @@ QT_QPA_PLATFORM=offscreen ./build/ascii-benchmark assets/demo-ascii.mp4 build/be
 ```
 
 PowerShell demo generation: `.\scripts\generate_preview.ps1`.
-The C++ generator draws a moving crescent and waves; it uses no downloaded media.
+The original synthetic demo is still available: [GIF](assets/demo.gif), [MP4](assets/demo-ascii.mp4),
+[poster](assets/preview.png), [source pattern](assets/demo-source.png).
+The C++ generator recreates these four synthetic assets; it does not replace the supplied clip at the top.
+It draws a moving crescent and waves without downloaded media.
 Rendered glyphs can vary with the OS monospace font, so output bytes are not cross-platform deterministic.
 Source animation positions/pixels are deterministic.
 
@@ -212,5 +301,7 @@ There is no promised conversion speed and no synthetic performance score.
 
 ## License
 
-[MIT](LICENSE) for project code and generated demo media. Qt, OpenCV, FFmpeg and system fonts
+[MIT](LICENSE) for project code and the original synthetic demo media.
+The supplied-clip showcase has separate [source notes](assets/readme-demo/README.md);
+the MIT license does not cover its underlying third-party animation. Qt, OpenCV, FFmpeg and system fonts
 retain their own licenses. Review their redistribution terms when packaging binaries.
