@@ -187,9 +187,11 @@ ConversionResult FramePipeline::run(const QString &input, const QString &output,
         QString completed = staged;
         if (encoder && settings.keepAudio) {
             completed = staging.filePath("with-audio.mp4");
+            // Long audio tracks and faststart copies can exceed the export timeout.
+            // Cancellation stays responsive while this full-length operation runs.
             runFfmpeg({"-i", staged, "-i", input, "-map", "0:v:0", "-map", "1:a:0?", "-c:v", "copy", "-c:a",
                        "aac", "-b:a", "192k", "-map_metadata", "-1", "-movflags", "+faststart", completed},
-                      stop);
+                      stop, 0);
         }
         copyOutput(completed, output);
         result.metrics.encodeMs += ms(finishing);

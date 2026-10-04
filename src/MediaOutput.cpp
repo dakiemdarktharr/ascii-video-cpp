@@ -38,7 +38,7 @@ void runFfmpeg(const QStringList &arguments, std::atomic_bool &stop, int timeout
     while (process.state() != QProcess::NotRunning) {
         process.waitForFinished(50);
         diagnostic = (diagnostic + process.readAll()).right(8192);
-        if (stop || timer.elapsed() > timeoutMs) {
+        if (stop || (timeoutMs > 0 && timer.elapsed() > timeoutMs)) {
             process.kill();
             process.waitForFinished(3000);
             throw std::runtime_error(stop ? "Stopped." : "FFmpeg timed out.");

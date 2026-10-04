@@ -6,6 +6,7 @@
 
 namespace ascii {
 QString ffmpegExecutable();
+// A zero timeout allows full-length media processing; stop is always checked.
 void runFfmpeg(const QStringList &arguments, std::atomic_bool &stop, int timeoutMs = 120000);
 void saveImage(const QImage &image, const QString &path);
 void copyOutput(const QString &source, const QString &destination);
