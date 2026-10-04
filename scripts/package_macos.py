@@ -1,9 +1,11 @@
 """Bundle Qt/OpenCV/FFmpeg and build a macOS DMG, with dependency provenance."""
 import argparse
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import urllib.request
@@ -126,10 +128,21 @@ def main():
         if path in identities:
             target = "@executable_path/../" + path.relative_to(bundle / "Contents").as_posix()
             execute("install_name_tool", "-id", target, path)
+        # Recent dyld rejects duplicate LC_RPATH entries introduced during deployment.
+        # install_name_tool removes one occurrence per invocation (Apple cctools).
+        rpaths = re.findall(r"cmd LC_RPATH\s+cmdsize \d+\s+path (.+?) \(offset", run("otool", "-l", path))
+        for rpath, count in Counter(rpaths).items():
+            keep = 0 if rpath.startswith(("/opt/homebrew/", "/usr/local/")) else 1
+            for _ in range(count - keep):
+                execute("install_name_tool", "-delete_rpath", rpath, path)
     for path in binaries:
         for reference in dependencies(path):
             if reference.startswith(("/opt/homebrew/", "/usr/local/")):
                 raise RuntimeError(f"Unbundled dependency: {path}: {reference}")
+            if reference.startswith("@executable_path/"):
+                target = executable.parent / reference.removeprefix("@executable_path/")
+                if not target.is_file():
+                    raise RuntimeError(f"Missing bundled dependency: {path}: {reference}")
     # Plugins deployed by macdeployqt may bring additional native libraries.
     prefix = Path(run("brew", "--prefix").strip())
     for path in bundle.rglob("*"):
