@@ -63,7 +63,7 @@ try {
     $versionText = $app.StandardOutput.ReadToEnd()
     $versionError = $app.StandardError.ReadToEnd()
     Set-Content -LiteralPath $version -Value $versionText
-    if ($app.ExitCode -ne 0 -or $versionText -notmatch 'ascii-video-cpp 1\.2\.0') {
+    if ($app.ExitCode -ne 0 -or $versionText -notmatch 'ascii-video-cpp 1\.2\.1') {
         throw "Installed app version check failed: exit $($app.ExitCode), $versionError"
     }
     $app.Dispose()

@@ -185,14 +185,21 @@ def main():
         sources.mkdir()
 
         def fetch(record):
-            stable = record["urls"]["stable"]
+            stable = dict(record["urls"]["stable"] or {})
             if not stable:
                 raise RuntimeError(f"No stable sources for {record['name']}")
+            # The GitLab-generated dav1d archive can return a challenge/error page.
+            # Use VideoLAN's official release, with the checksum independently pinned
+            # by MSYS2's dav1d 1.5.4 source recipe. Keep the actual source URL in the ZIP.
+            if record["name"] == "dav1d" and record["versions"]["stable"] == "1.5.4":
+                stable = {"url": "https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/dav1d-1.5.4.tar.xz",
+                          "checksum": "686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5"}
             downloads = [(record["name"] + "-" + Path(stable["url"].split("?", 1)[0]).name,
                           stable["url"], stable.get("checksum"))]
             for index, patch in enumerate(record.get("patches", []), 1):
                 if patch.get("url"):
                     downloads.append((f"{record['name']}-patch-{index}.patch", patch["url"], patch.get("sha256")))
+            downloaded = []
             for name, url, expected in downloads:
                 destination = sources / name
                 print("Source:", name, flush=True)
@@ -200,14 +207,18 @@ def main():
                     try:
                         with urllib.request.urlopen(url, timeout=60) as response, destination.open("wb") as target:
                             shutil.copyfileobj(response, target)
-                        if expected and checksum(destination) != expected:
+                        actual = checksum(destination)
+                        if expected and actual != expected:
                             raise RuntimeError(f"Source checksum mismatch: {name}")
+                        downloaded.append({"package": record["name"], "file": name, "url": url, "sha256": actual})
                         break
                     except Exception:
                         if attempt == 2:
                             raise
+            return downloaded
         with ThreadPoolExecutor(max_workers=4) as pool:
-            list(pool.map(fetch, records))
+            downloads = [item for group in pool.map(fetch, records) for item in group]
+        (sources / "source-downloads.json").write_text(json.dumps(downloads, indent=2) + "\n")
         part, size, archive = 0, 0, None
         try:
             for path in sorted(sources.iterdir()):

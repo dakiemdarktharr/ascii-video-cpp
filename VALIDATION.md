@@ -1,4 +1,4 @@
-# Version 1.2.0 validation
+# Version 1.2.1 validation
 
 Checks on 2026-10-05 (Asia/Saigon), Windows 11 x64. The previous version's record follows below.
 
@@ -26,6 +26,10 @@ The release workflow repeats these checks with full dependency sources before pu
 was also checked for all 98 unique Windows dependency archives before release. Failed runs remain available
 in the repository Actions tab for diagnosis.
 The local machine does not have Docker or macOS, so those checks run on GitHub-hosted runners.
+The v1.2.0 release attempt found a missing Git executable in Windows CI when collecting application
+sources and a checksum mismatch for GitLab's dav1d archive on Intel. Version 1.2.1 adds the MSYS2 Git
+package and downloads VideoLAN's official dav1d release with the checksum pinned by MSYS2. Actual
+Mac source URLs and hashes are included in source-downloads.json. No v1.2.0 installer release was published.
 
 The audit found and fixed loss of audio, insufficient default sampling, missing first-frame previews,
 platform font differences, macOS signedness warnings and a deprecated assertion in newer Qt Test.

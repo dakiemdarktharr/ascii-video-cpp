@@ -43,12 +43,15 @@ names, adds an ad-hoc signature, writes runtime provenance, licenses and source 
 sources and formula patches with checksum verification,
 and creates a DMG with an Applications shortcut. CI verifies signatures and the DMG, then converts a video using
 only the bundled runtime and a system-only PATH. Intel and Apple Silicon builds are separate.
+Each source ZIP records its actual upstream URLs and SHA256 hashes in `source-downloads.json`.
+For dav1d 1.5.4, the official VideoLAN release archive replaces GitLab's generated archive; its checksum
+is pinned to the one in MSYS2's source recipe.
 Production Developer ID signing/notarization requires the project's own Apple credentials; these are not configured.
 
 ## Publish
 
 Keep CMake, vcpkg, installer test and script versions in sync. After reviewing and testing the commit, push a
-matching version tag (`v1.2.0` for this release). `Publish installers` validates the tag, rebuilds and tests every
+matching version tag (`v1.2.1` for this release). `Publish installers` validates the tag, rebuilds and tests every
 platform, downloads corresponding dependency sources, computes SHA256 checksums and publishes all artifacts
 only when every job succeeds. Release notes are in `packaging/release-notes.md`.
 

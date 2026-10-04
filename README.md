@@ -15,7 +15,7 @@ Download installers from [GitHub Releases](https://github.com/dakiemdarktharr/as
 | System | Download | Install |
 | --- | --- | --- |
 | Windows 10/11 x64 | [Setup.exe](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/Setup.exe) | Run it, then open ASCII Video C++ from the Start Menu. |
-| Ubuntu 24.04 x64 | [ascii-video_1.2.0_amd64.deb](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ascii-video_1.2.0_amd64.deb) | Run `sudo apt install ./ascii-video_1.2.0_amd64.deb`, then open ASCII Video. |
+| Ubuntu 24.04 x64 | [ascii-video_1.2.1_amd64.deb](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ascii-video_1.2.1_amd64.deb) | Run `sudo apt install ./ascii-video_1.2.1_amd64.deb`, then open ASCII Video. |
 | macOS 15+ Apple Silicon | [arm64 DMG](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ASCII-Video-macOS-arm64.dmg) | Open the disk image and drag ASCII Video to Applications. |
 | macOS 15+ Intel | [x86_64 DMG](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ASCII-Video-macOS-x86_64.dmg) | Open the disk image and drag ASCII Video to Applications. |
 

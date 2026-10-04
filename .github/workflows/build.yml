@@ -53,6 +53,7 @@ jobs:
           msystem: MINGW64
           update: true
           install: >-
+            git
             mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
             mingw-w64-x86_64-qt6-base mingw-w64-x86_64-opencv mingw-w64-x86_64-ffmpeg
             mingw-w64-x86_64-python mingw-w64-x86_64-nsis
