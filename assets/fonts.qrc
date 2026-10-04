@@ -1,1 +1,5 @@
-<RCC><qresource prefix="/fonts"><file alias="mono.ttf">fonts/DejaVuSansMono.ttf</file></qresource></RCC>
+<RCC><qresource prefix="/fonts">
+<file alias="mono.ttf">fonts/DejaVuSansMono.ttf</file>
+<file alias="atlas-fine.png">fonts/atlas-fine.png</file>
+<file alias="atlas-classic.png">fonts/atlas-classic.png</file>
+</qresource></RCC>

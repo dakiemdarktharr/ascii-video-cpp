@@ -3,7 +3,6 @@
 #include <QFileInfo>
 #include <QFont>
 #include <QFontDatabase>
-#include <QPainter>
 #include <QResource>
 #include <QStandardPaths>
 #include <algorithm>
@@ -92,16 +91,14 @@ AsciiConverter::AsciiConverter(Settings settings)
         lut_[static_cast<size_t>(i)] =
             static_cast<unsigned char>(value * static_cast<double>(settings_.charset.size() - 1) / 255.0);
     }
-    QFont font = monospaceFont();
-    font.setPixelSize(settings_.fineDetail ? 7 : 14);
+    initializeFontResources();
+    // Pre-rendered ASCII cells keep tiny glyphs identical across Qt/platform font engines.
+    const QImage atlas(settings_.fineDetail ? ":/fonts/atlas-fine.png" : ":/fonts/atlas-classic.png");
+    if (atlas.isNull())
+        throw std::runtime_error("The bundled ASCII glyph atlas is unavailable.");
     for (char c : settings_.charset) {
-        QImage glyph(cellWidth_, cellHeight_, QImage::Format_ARGB32);
-        glyph.fill(Qt::transparent);
-        QPainter painter(&glyph);
-        painter.setFont(font);
-        painter.setPen(Qt::white);
-        painter.drawText(glyph.rect(), Qt::AlignCenter, QString(QChar::fromLatin1(c)));
-        painter.end();
+        QImage glyph = atlas.copy((c - 32) * cellWidth_, 0, cellWidth_, cellHeight_)
+                           .convertToFormat(QImage::Format_ARGB32);
         atlas_.push_back(std::move(glyph));
     }
 }
