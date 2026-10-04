@@ -7,6 +7,10 @@ QT_QPA_PLATFORM=offscreen ./build/ascii-benchmark input.mp4 output.mp4 4 100
 Arguments after the paths are worker count and ASCII columns. Windows PowerShell uses
 `$env:QT_QPA_PLATFORM = 'offscreen'` and `.\build\ascii-benchmark.exe`.
 
+Version 1.2 uses the same fine 4×8 cells, edge enhancement and audio preservation as the app.
+The report includes output dimensions and those settings. Historical 1.1 reports used 8×16 cells;
+do not compare results by column count alone. The synthetic demo generator now uses the Full HD default.
+
 JSON reports decode time (including initial probe), grayscale/resize time, glyph rendering time,
 encode time (pipe writes, waits, finalization and output commit), total wall time, actual processing
 FPS and peak occupied ring slots. Preprocessing/rendering sum the work across workers; stages

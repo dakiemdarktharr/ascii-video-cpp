@@ -11,7 +11,8 @@ import zipfile
 
 
 def run(*args):
-    return subprocess.check_output([str(a) for a in args], text=True)
+    print("Running:", str(args[0]), flush=True)
+    return subprocess.check_output([str(a) for a in args], text=True, stdin=subprocess.DEVNULL, timeout=600)
 
 
 def checksum(path):
@@ -64,17 +65,6 @@ def main():
     resources.mkdir(exist_ok=True)
     shutil.copy2(root / "LICENSE", resources / "LICENSE.txt")
     shutil.copy2(root / "assets/fonts/LICENSE-DejaVu.txt", resources / "LICENSE-DejaVu.txt")
-    records = json.loads(run("brew", "info", "--json=v2", *sorted(owners)))["formulae"]
-    for record in records:
-        (resources / (record["name"] + "-formula.rb")).write_text(run("brew", "cat", record["name"]))
-    (resources / "runtime-manifest.json").write_text(json.dumps(records, indent=2) + "\n")
-    shutil.copy2(resources / "runtime-manifest.json", output / f"macos-{architecture}-runtime-manifest.json")
-    (resources / "THIRD-PARTY-NOTICES.txt").write_text(
-        "Application source: MIT (LICENSE.txt). Bundled FFmpeg and its dependencies include GPL code.\n"
-        "This binary distribution is under GPL-3.0-or-later, without warranty. Qt is dynamically linked.\n"
-        "You may replace compatible libraries and debug your modifications. Exact upstream source URLs,\n"
-        "licenses, versions and Homebrew build recipes are included here. Corresponding source archives\n"
-        "are distributed with the DMG in the GitHub release.\n")
     run(qt / "bin/macdeployqt", bundle, "-always-overwrite", "-verbose=1", f"-executable={ffmpeg}")
     # Qt handles frameworks/plugins; dylibbundler closes the other native dependencies.
     native = [executable, ffmpeg]
@@ -82,8 +72,10 @@ def main():
         if path.is_file() and not path.is_symlink() and "Mach-O" in run("file", "-b", path):
             if path not in native:
                 native.append(path)
-    arguments = ["dylibbundler", "-b", "-od", "-d", bundle / "Contents/Frameworks",
-                 "-p", "@executable_path/../Frameworks/"]
+    arguments = ["dylibbundler", "-b", "-cd", "-of", "-ns", "-d", bundle / "Contents/Libraries",
+                 "-p", "@executable_path/../Libraries/", "-i", "/System/Library",
+                 "-i", bundle / "Contents/Frameworks", "-s", bundle / "Contents/Frameworks",
+                 "-s", Path(run("brew", "--prefix").strip()) / "lib"]
     for path in native:
         arguments += ["-x", path]
     run(*arguments)
@@ -92,6 +84,28 @@ def main():
             for reference in dependencies(path):
                 if reference.startswith(("/opt/homebrew/", "/usr/local/")):
                     raise RuntimeError(f"Unbundled dependency: {path}: {reference}")
+    # Plugins deployed by macdeployqt may bring additional native libraries.
+    prefix = Path(run("brew", "--prefix").strip())
+    for path in bundle.rglob("*"):
+        if path.is_file() and not path.is_symlink():
+            original = prefix / "lib" / path.name
+            if original.is_file() and original.resolve().is_relative_to(cellar):
+                owners.add(original.resolve().relative_to(cellar).parts[0])
+    records = json.loads(run("brew", "info", "--json=v2", *sorted(owners)))["formulae"]
+    for record in records:
+        recipe = Path(run("brew", "--prefix", record["name"]).strip()) / ".brew" / (record["name"] + ".rb")
+        if recipe.is_file():
+            shutil.copy2(recipe, resources / recipe.name)
+        else:
+            (resources / (record["name"] + "-formula.rb")).write_text(run("brew", "cat", record["name"]))
+    (resources / "runtime-manifest.json").write_text(json.dumps(records, indent=2) + "\n")
+    shutil.copy2(resources / "runtime-manifest.json", output / f"macos-{architecture}-runtime-manifest.json")
+    (resources / "THIRD-PARTY-NOTICES.txt").write_text(
+        "Application source: MIT (LICENSE.txt). Bundled FFmpeg and its dependencies include GPL code.\n"
+        "This binary distribution is under GPL-3.0-or-later, without warranty. Qt is dynamically linked.\n"
+        "You may replace compatible libraries and debug your modifications. Exact upstream source URLs,\n"
+        "licenses, versions and Homebrew build recipes are included here. Corresponding source archives\n"
+        "are distributed with the DMG in the GitHub release.\n")
     run("codesign", "--force", "--deep", "--sign", "-", bundle)
     run("codesign", "--verify", "--deep", "--strict", bundle)
     if not args.skip_source_download:
@@ -124,7 +138,7 @@ def main():
                     part += 1
                     size = 0
                     archive = zipfile.ZipFile(output / f"macos-{architecture}-dependency-sources-{part}.zip", "w", zipfile.ZIP_STORED)
-                    for recipe in resources.glob("*-formula.rb"):
+                    for recipe in resources.glob("*.rb"):
                         archive.write(recipe, recipe.name)
                     archive.write(resources / "runtime-manifest.json", "runtime-manifest.json")
                 archive.write(path, path.name)

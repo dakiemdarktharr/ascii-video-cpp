@@ -51,7 +51,6 @@ int main(int argc, char **argv) {
             }
             writer.finish();
             ascii::Settings settings;
-            settings.columns = 80;
             auto result =
                 ascii::FramePipeline{}.run(source, assets.filePath("demo-ascii.mp4"), settings, stop);
             ascii::saveImage(result.poster, assets.filePath("preview.png"));
@@ -86,6 +85,11 @@ int main(int argc, char **argv) {
                                  {"peak_resident_slots", m.peakResidentFrames},
                                  {"threads", settings.threads},
                                  {"columns", settings.columns},
+                                 {"output_width", result.poster.width()},
+                                 {"output_height", result.poster.height()},
+                                 {"fine_detail", settings.fineDetail},
+                                 {"edge_enhancement", settings.sharpen},
+                                 {"keep_audio", settings.keepAudio},
                                  {"note", "Stage times include accumulated worker work and encoder waits; "
                                           "they overlap and are not additive."}};
         std::cout << QJsonDocument(report).toJson().constData();
