@@ -1,6 +1,6 @@
 {
   "name": "ascii-video-cpp",
-  "version-string": "1.2.1",
+  "version-string": "1.2.2",
   "dependencies": [
     {
       "name": "qtbase",

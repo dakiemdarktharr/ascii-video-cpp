@@ -15,17 +15,13 @@ Download installers from [GitHub Releases](https://github.com/dakiemdarktharr/as
 | System | Download | Install |
 | --- | --- | --- |
 | Windows 10/11 x64 | [Setup.exe](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/Setup.exe) | Run it, then open ASCII Video C++ from the Start Menu. |
-| Ubuntu 24.04 x64 | [ascii-video_1.2.1_amd64.deb](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ascii-video_1.2.1_amd64.deb) | Run `sudo apt install ./ascii-video_1.2.1_amd64.deb`, then open ASCII Video. |
-| macOS 15+ Apple Silicon | [arm64 DMG](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ASCII-Video-macOS-arm64.dmg) | Open the disk image and drag ASCII Video to Applications. |
-| macOS 15+ Intel | [x86_64 DMG](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ASCII-Video-macOS-x86_64.dmg) | Open the disk image and drag ASCII Video to Applications. |
+| Ubuntu 24.04 x64 | [ascii-video_1.2.2_amd64.deb](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ascii-video_1.2.2_amd64.deb) | Run `sudo apt install ./ascii-video_1.2.2_amd64.deb`, then open ASCII Video. |
 
-Windows and macOS bundles include Qt, OpenCV and FFmpeg. Ubuntu installs runtime dependencies through apt.
+The Windows installer includes Qt, OpenCV and FFmpeg. Ubuntu installs runtime dependencies through apt.
 Source code archives are for developers; use the files above to install the app.
-Installers are unsigned; Mac bundles use an ad-hoc signature and are not notarized.
-If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**
-for ASCII Video, following [Apple's instructions](https://support.apple.com/en-us/102445).
+The Windows installer has no trusted code-signing certificate.
 Use the release's `SHA256SUMS.txt` to check downloads. Uninstall Windows through Settings → Apps;
-on Mac remove the app from Applications; on Ubuntu run `sudo apt remove ascii-video`.
+on Ubuntu run `sudo apt remove ascii-video`.
 
 ## Use the app
 
@@ -128,13 +124,6 @@ sudo apt update
 sudo apt install build-essential cmake ninja-build qt6-base-dev libopencv-dev ffmpeg fonts-dejavu-core
 ```
 
-**macOS, Homebrew:**
-
-```sh
-brew install cmake ninja qt opencv ffmpeg dylibbundler
-export CMAKE_PREFIX_PATH="$(brew --prefix qt)"
-```
-
 Then on each system:
 
 ```sh
@@ -145,8 +134,8 @@ cmake --build build --parallel 4
 ctest --test-dir build --output-on-failure
 ```
 
-Run `./build/ascii-video-cpp` on Linux, `./build/ascii-video-cpp.exe` on Windows, or
-`open build/ascii-video-cpp.app` on Mac. Windows development builds need MINGW64's bin directory on PATH.
+Run `./build/ascii-video-cpp` on Linux or `./build/ascii-video-cpp.exe` on Windows.
+Windows development builds need MINGW64's bin directory on PATH.
 Use the installer to distribute the app, rather than copying only the executable.
 
 [Packaging and release process](packaging/README.md) · [Validation record](VALIDATION.md)

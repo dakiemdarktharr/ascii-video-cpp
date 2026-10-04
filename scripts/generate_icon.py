@@ -20,7 +20,6 @@ draw.line((252, 749, 295, 789, 252, 829), fill="#b3dbed", width=18)
 draw.line((345, 824, 440, 824), fill="#b3dbed", width=18)
 image.resize((512, 512), Image.Resampling.LANCZOS).save(root / "app.png")
 image.save(root / "app.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-image.save(root / "app.icns")
 svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">\n'
 svg += '<rect x="32" y="32" width="960" height="960" rx="206" fill="#355aa2"/>\n'
 svg += ''.join(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="white"/>\n' for x, y, w, h in rectangles)

@@ -89,57 +89,6 @@ jobs:
             build/test-results.*
             build-package/installed-tests.txt
             build-package/installed-version.txt
-  macos:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15
-            arch: arm64
-          - runner: macos-15-intel
-            arch: x86_64
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: brew install cmake ninja qt opencv ffmpeg dylibbundler
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
-      - run: cmake --build build --parallel 3
-      - run: ctest --test-dir build --output-on-failure
-      - name: Build self-contained DMG
-        env:
-          RELEASE_BUILD: ${{ inputs.release == true && 'true' || 'false' }}
-        run: |
-          extra=()
-          if [ "$RELEASE_BUILD" != true ]; then extra+=(--skip-source-download); fi
-          python3 scripts/package_macos.py --build-dir build --output-dir build-package "${extra[@]}"
-      - name: Smoke test bundled runtime with isolated PATH
-        run: |
-          export QT_QPA_PLATFORM=offscreen
-          unset QT_PLUGIN_PATH QT_QPA_PLATFORM_PLUGIN_PATH ASCII_FFMPEG DYLD_LIBRARY_PATH
-          export PATH=/usr/bin:/bin:/usr/sbin:/sbin
-          "build-package/ASCII Video.app/Contents/MacOS/ascii-video-cpp" --version
-          DYLD_PRINT_LIBRARIES=1 "build-package/ASCII Video.app/Contents/MacOS/ascii-video-cpp" --convert assets/demo-ascii.mp4 --output build-package/installed-smoke.mp4 --width 1280 2>build-package/native-loader.log
-          if grep -E "/opt/homebrew/|/usr/local/(Cellar|opt)/" build-package/native-loader.log; then exit 1; fi
-          test -s build-package/installed-smoke.mp4
-          /usr/bin/hdiutil verify build-package/*.dmg
-      - uses: actions/upload-artifact@v4
-        with:
-          name: installer-macos-${{ matrix.arch }}
-          compression-level: 0
-          path: |
-            build-package/*.dmg
-            build-package/*-runtime-manifest.json
-            build-package/*-dependency-sources-*.zip
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: macos-${{ matrix.arch }}-test-log
-          path: |
-            build/Testing/Temporary/LastTest.log
-            build/test-results.*
-            build-package/native-loader.log
   docker:
     runs-on: ubuntu-24.04
     steps:

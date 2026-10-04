@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ascii-video-cpp VERSION 1.2.1 LANGUAGES CXX)
+project(ascii-video-cpp VERSION 1.2.2 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -47,15 +47,7 @@ if(ASCII_BUILD_BENCHMARKS)
   target_link_libraries(ascii-benchmark PRIVATE ascii_core)
   ascii_warnings(ascii-benchmark)
 endif()
-if(APPLE)
-  set_target_properties(ascii-video-cpp PROPERTIES MACOSX_BUNDLE TRUE
-    MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.dakiemdarktharr.ascii-video"
-    MACOSX_BUNDLE_BUNDLE_NAME "ASCII Video" MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
-    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}" MACOSX_BUNDLE_ICON_FILE "app.icns")
-  target_sources(ascii-video-cpp PRIVATE assets/icons/app.icns)
-  set_source_files_properties(assets/icons/app.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-endif()
-install(TARGETS ascii-video-cpp RUNTIME DESTINATION bin BUNDLE DESTINATION .)
+install(TARGETS ascii-video-cpp RUNTIME DESTINATION bin)
 if(UNIX AND NOT APPLE)
   install(FILES LICENSE assets/fonts/LICENSE-DejaVu.txt DESTINATION share/doc/ascii-video)
   install(FILES packaging/ascii-video.desktop DESTINATION share/applications)

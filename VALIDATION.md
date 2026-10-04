@@ -1,4 +1,4 @@
-# Version 1.2.1 validation
+# Version 1.2.2 validation
 
 Checks on 2026-10-05 (Asia/Saigon), Windows 11 x64. The previous version's record follows below.
 
@@ -18,23 +18,21 @@ Checks on 2026-10-05 (Asia/Saigon), Windows 11 x64. The previous version's recor
   to overwrite an existing v1.1.0 user installation; installation/uninstallation is tested on CI runners.
 - clang-format, Python compilation and shell syntax checks passed. The generated UI screenshot was reviewed.
 
-[Installer preflight on GitHub Actions](https://github.com/dakiemdarktharr/ascii-video-cpp/actions/runs/37240529683)
-passed all five jobs: Windows, Ubuntu, both Mac architectures and Docker. Windows installation/uninstallation,
-the installed DEB and both isolated Mac runtimes passed. All native platforms passed the functional tests.
+[Installer preflight on GitHub Actions](https://github.com/dakiemdarktharr/ascii-video-cpp/actions/runs/37241173690)
+passed the Windows, Ubuntu and Docker checks. Windows installation/uninstallation and the installed DEB
+passed. Both native platforms passed the functional tests.
 Docker tests build and run the test/runtime/gui targets, including an actual conversion and browser-desktop health.
 The release workflow repeats these checks with full dependency sources before publishing. Source availability
 was also checked for all 98 unique Windows dependency archives before release. Failed runs remain available
 in the repository Actions tab for diagnosis.
-The local machine does not have Docker or macOS, so those checks run on GitHub-hosted runners.
-The v1.2.0 release attempt found a missing Git executable in Windows CI when collecting application
-sources and a checksum mismatch for GitLab's dav1d archive on Intel. Version 1.2.1 adds the MSYS2 Git
-package and downloads VideoLAN's official dav1d release with the checksum pinned by MSYS2. Actual
-Mac source URLs and hashes are included in source-downloads.json. No v1.2.0 installer release was published.
+The local machine does not have Docker, so container checks run on GitHub-hosted runners.
+The first release attempt found a missing Git executable in Windows CI when collecting application
+sources. The workflow now installs the MSYS2 Git package. Earlier development tags were not published
+as installer releases.
 
 The audit found and fixed loss of audio, insufficient default sampling, missing first-frame previews,
-platform font differences, macOS signedness warnings and a deprecated assertion in newer Qt Test.
-Mac packaging now relocates every bundled import, removes duplicate runtime search paths and signs nested
-libraries before the app. Full-length audio processing has no fixed two-minute timeout and remains cancellable.
+platform font differences, compiler signedness warnings and a deprecated assertion in newer Qt Test.
+Full-length audio processing has no fixed two-minute timeout and remains cancellable.
 ASCII retains the visual shape of text; it cannot guarantee recovery of tiny/blurred text. Variable frame
 rate timestamps are represented by nominal FPS. Native file-picker gestures and third-party player
 playback are not covered by automated controller tests. Installers have no trusted code-signing certificate.

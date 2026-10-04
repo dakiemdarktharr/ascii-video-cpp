@@ -29,7 +29,7 @@ def main():
     parser.add_argument("--build-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--prefix", type=Path, default=Path("C:/msys64/mingw64"))
-    parser.add_argument("--version", default="1.2.1")
+    parser.add_argument("--version", default="1.2.2")
     parser.add_argument("--skip-source-download", action="store_true",
                         help="CI smoke builds only; do not publish these installers")
     args = parser.parse_args()
