@@ -116,10 +116,11 @@ jobs:
       - name: Smoke test bundled runtime with isolated PATH
         run: |
           export QT_QPA_PLATFORM=offscreen
-          unset QT_PLUGIN_PATH ASCII_FFMPEG DYLD_LIBRARY_PATH
+          unset QT_PLUGIN_PATH QT_QPA_PLATFORM_PLUGIN_PATH ASCII_FFMPEG DYLD_LIBRARY_PATH
           export PATH=/usr/bin:/bin:/usr/sbin:/sbin
           "build-package/ASCII Video.app/Contents/MacOS/ascii-video-cpp" --version
-          "build-package/ASCII Video.app/Contents/MacOS/ascii-video-cpp" --convert assets/demo-ascii.mp4 --output build-package/installed-smoke.mp4 --width 1280
+          DYLD_PRINT_LIBRARIES=1 "build-package/ASCII Video.app/Contents/MacOS/ascii-video-cpp" --convert assets/demo-ascii.mp4 --output build-package/installed-smoke.mp4 --width 1280 2>build-package/native-loader.log
+          if grep -E "/opt/homebrew/|/usr/local/(Cellar|opt)/" build-package/native-loader.log; then exit 1; fi
           test -s build-package/installed-smoke.mp4
           /usr/bin/hdiutil verify build-package/*.dmg
       - uses: actions/upload-artifact@v4
@@ -137,6 +138,7 @@ jobs:
           path: |
             build/Testing/Temporary/LastTest.log
             build/test-results.*
+            build-package/native-loader.log
   docker:
     runs-on: ubuntu-24.04
     steps:

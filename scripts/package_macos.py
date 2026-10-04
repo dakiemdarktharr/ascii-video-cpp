@@ -11,12 +11,16 @@ import zipfile
 
 
 def run(*args):
-    print("Running:", str(args[0]), flush=True)
     try:
         return subprocess.check_output([str(a) for a in args], text=True, stdin=subprocess.DEVNULL, timeout=600)
     except subprocess.CalledProcessError as error:
         print(error.output, flush=True)
         raise
+
+
+def execute(*args):
+    print("Running:", str(args[0]), flush=True)
+    subprocess.run([str(a) for a in args], check=True, stdin=subprocess.DEVNULL, timeout=600)
 
 
 def checksum(path):
@@ -82,8 +86,9 @@ def main():
             plugins.append(target)
     # Deploy exactly the plugins used by this Widgets app, including offscreen smoke tests.
     # Unused SVG/PDF/virtual-keyboard plugins can require absent optional Qt modules.
-    run(qt / "bin/macdeployqt", bundle, "-always-overwrite", "-no-plugins", "-verbose=1",
+    execute(qt / "bin/macdeployqt", bundle, "-always-overwrite", "-no-plugins", "-verbose=1",
         f"-executable={ffmpeg}", *(f"-executable={plugin}" for plugin in plugins))
+    (resources / "qt.conf").write_text("[Paths]\nPrefix=.\nPlugins=PlugIns\n", encoding="utf-8")
     # Qt handles frameworks/plugins; dylibbundler closes the other native dependencies.
     native = [executable, ffmpeg]
     for path in bundle.rglob("*"):
@@ -96,7 +101,13 @@ def main():
                  "-s", Path(run("brew", "--prefix").strip()) / "lib"]
     for path in native:
         arguments += ["-x", path]
-    run(*arguments)
+    execute(*arguments)
+    # macdeployqt can relocate dependents while retaining an absolute dylib identity.
+    # Normalize identities before auditing references and signing the final bundle.
+    for folder in (bundle / "Contents/Frameworks", bundle / "Contents/Libraries"):
+        for path in folder.glob("*.dylib"):
+            if not path.is_symlink():
+                execute("install_name_tool", "-id", f"@executable_path/../{folder.name}/{path.name}", path)
     for path in bundle.rglob("*"):
         if path.is_file() and not path.is_symlink() and "Mach-O" in run("file", "-b", path):
             for reference in dependencies(path):
@@ -124,8 +135,8 @@ def main():
         "You may replace compatible libraries and debug your modifications. Exact upstream source URLs,\n"
         "licenses, versions and Homebrew build recipes are included here. Corresponding source archives\n"
         "are distributed with the DMG in the GitHub release.\n")
-    run("codesign", "--force", "--deep", "--sign", "-", bundle)
-    run("codesign", "--verify", "--deep", "--strict", bundle)
+    execute("codesign", "--force", "--deep", "--sign", "-", bundle)
+    execute("codesign", "--verify", "--deep", "--strict", bundle)
     if not args.skip_source_download:
         sources = output / "sources"
         sources.mkdir()
@@ -171,7 +182,7 @@ def main():
     (image_root / "Applications").symlink_to("/Applications")
     architecture = run("uname", "-m").strip()
     dmg = output / f"ASCII-Video-macOS-{architecture}.dmg"
-    run("hdiutil", "create", "-volname", "ASCII Video", "-srcfolder", image_root,
+    execute("hdiutil", "create", "-volname", "ASCII Video", "-srcfolder", image_root,
         "-ov", "-format", "UDZO", dmg)
     print(dmg)
 
