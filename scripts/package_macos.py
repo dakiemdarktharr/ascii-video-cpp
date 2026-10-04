@@ -66,7 +66,7 @@ def main():
             if dependency.is_file() and dependency.resolve().is_relative_to(cellar):
                 pending.append(dependency)
     qt = Path(run("brew", "--prefix", "qt").strip())
-    for resolved in (qt.resolve(), (qt / "lib/QtCore.framework").resolve()):
+    for resolved in ((qt / "lib/QtCore.framework").resolve(),):
         if resolved.is_relative_to(cellar):
             owners.add(resolved.relative_to(cellar).parts[0])
     architecture = run("uname", "-m").strip()
@@ -102,17 +102,34 @@ def main():
     for path in native:
         arguments += ["-x", path]
     execute(*arguments)
-    # macdeployqt can relocate dependents while retaining an absolute dylib identity.
-    # Normalize identities before auditing references and signing the final bundle.
-    for folder in (bundle / "Contents/Frameworks", bundle / "Contents/Libraries"):
-        for path in folder.glob("*.dylib"):
-            if not path.is_symlink():
-                execute("install_name_tool", "-id", f"@executable_path/../{folder.name}/{path.name}", path)
-    for path in bundle.rglob("*"):
-        if path.is_file() and not path.is_symlink() and "Mach-O" in run("file", "-b", path):
-            for reference in dependencies(path):
-                if reference.startswith(("/opt/homebrew/", "/usr/local/")):
-                    raise RuntimeError(f"Unbundled dependency: {path}: {reference}")
+    # Relocate all Mach-O identities and imports, including Homebrew's split Qt frameworks.
+    binaries = [path for path in bundle.rglob("*") if path.is_file() and not path.is_symlink()
+                and "Mach-O" in run("file", "-b", path)]
+    by_name, by_id = {}, {}
+    identities = {}
+    for path in sorted(binaries):
+        lines = run("otool", "-D", path).splitlines()[1:]
+        if lines:
+            identity = lines[0].strip()
+            target = "@executable_path/../" + path.relative_to(bundle / "Contents").as_posix()
+            identities[path] = identity
+            by_name.setdefault(path.name, target)
+            by_id[identity] = target
+    for path in binaries:
+        references = dependencies(path)
+        for reference in references:
+            if reference == identities.get(path) or reference.startswith(("/usr/lib/", "/System/Library/")):
+                continue
+            target = by_id.get(reference) or by_name.get(Path(reference).name)
+            if target and target != reference:
+                execute("install_name_tool", "-change", reference, target, path)
+        if path in identities:
+            target = "@executable_path/../" + path.relative_to(bundle / "Contents").as_posix()
+            execute("install_name_tool", "-id", target, path)
+    for path in binaries:
+        for reference in dependencies(path):
+            if reference.startswith(("/opt/homebrew/", "/usr/local/")):
+                raise RuntimeError(f"Unbundled dependency: {path}: {reference}")
     # Plugins deployed by macdeployqt may bring additional native libraries.
     prefix = Path(run("brew", "--prefix").strip())
     for path in bundle.rglob("*"):
@@ -135,6 +152,9 @@ def main():
         "You may replace compatible libraries and debug your modifications. Exact upstream source URLs,\n"
         "licenses, versions and Homebrew build recipes are included here. Corresponding source archives\n"
         "are distributed with the DMG in the GitHub release.\n")
+    # Custom Libraries/ paths are not always visited by codesign --deep.
+    for path in binaries:
+        execute("codesign", "--force", "--sign", "-", path)
     execute("codesign", "--force", "--deep", "--sign", "-", bundle)
     execute("codesign", "--verify", "--deep", "--strict", bundle)
     if not args.skip_source_download:
