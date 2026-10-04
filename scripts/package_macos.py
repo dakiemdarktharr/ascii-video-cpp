@@ -12,7 +12,11 @@ import zipfile
 
 def run(*args):
     print("Running:", str(args[0]), flush=True)
-    return subprocess.check_output([str(a) for a in args], text=True, stdin=subprocess.DEVNULL, timeout=600)
+    try:
+        return subprocess.check_output([str(a) for a in args], text=True, stdin=subprocess.DEVNULL, timeout=600)
+    except subprocess.CalledProcessError as error:
+        print(error.output, flush=True)
+        raise
 
 
 def checksum(path):
@@ -40,11 +44,12 @@ def main():
     shutil.copytree(args.build_dir / "ascii-video-cpp.app", bundle)
     executable = bundle / "Contents/MacOS/ascii-video-cpp"
     ffmpeg = bundle / "Contents/MacOS/ffmpeg"
-    shutil.copy2(shutil.which("ffmpeg"), ffmpeg)
+    ffmpeg_source = Path(shutil.which("ffmpeg")).resolve()
+    shutil.copy2(ffmpeg_source, ffmpeg)
     # Discover provenance before replacing the original Homebrew install names.
     cellar = Path(run("brew", "--cellar").strip()).resolve()
     owners, visited = set(), set()
-    pending = [executable, ffmpeg]
+    pending = [executable, ffmpeg_source]
     while pending:
         path = pending.pop().resolve()
         if path in visited:
@@ -65,7 +70,20 @@ def main():
     resources.mkdir(exist_ok=True)
     shutil.copy2(root / "LICENSE", resources / "LICENSE.txt")
     shutil.copy2(root / "assets/fonts/LICENSE-DejaVu.txt", resources / "LICENSE-DejaVu.txt")
-    run(qt / "bin/macdeployqt", bundle, "-always-overwrite", "-verbose=1", f"-executable={ffmpeg}")
+    plugin_root = Path(run(qt / "bin/qmake", "-query", "QT_INSTALL_PLUGINS").strip())
+    plugins = []
+    for group, names in {"platforms": ["qcocoa", "qoffscreen"],
+                         "styles": ["qmacstyle"], "imageformats": ["qjpeg", "qgif", "qico"]}.items():
+        for name in names:
+            source = plugin_root / group / ("lib" + name + ".dylib")
+            target = bundle / "Contents/PlugIns" / group / source.name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+            plugins.append(target)
+    # Deploy exactly the plugins used by this Widgets app, including offscreen smoke tests.
+    # Unused SVG/PDF/virtual-keyboard plugins can require absent optional Qt modules.
+    run(qt / "bin/macdeployqt", bundle, "-always-overwrite", "-no-plugins", "-verbose=1",
+        f"-executable={ffmpeg}", *(f"-executable={plugin}" for plugin in plugins))
     # Qt handles frameworks/plugins; dylibbundler closes the other native dependencies.
     native = [executable, ffmpeg]
     for path in bundle.rglob("*"):
