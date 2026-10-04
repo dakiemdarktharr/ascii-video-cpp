@@ -165,8 +165,9 @@ def main():
         "You may replace compatible libraries and debug your modifications. Exact upstream source URLs,\n"
         "licenses, versions and Homebrew build recipes are included here. Corresponding source archives\n"
         "are distributed with the DMG in the GitHub release.\n")
+    # Sign nested code first; signing the main executable also validates its bundle.
     # Custom Libraries/ paths are not always visited by codesign --deep.
-    for path in binaries:
+    for path in sorted(binaries, key=lambda item: (item == executable, -len(item.parts))):
         execute("codesign", "--force", "--sign", "-", path)
     execute("codesign", "--force", "--deep", "--sign", "-", bundle)
     execute("codesign", "--verify", "--deep", "--strict", bundle)

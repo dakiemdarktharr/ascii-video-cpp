@@ -22,6 +22,8 @@ Download installers from [GitHub Releases](https://github.com/dakiemdarktharr/as
 Windows and macOS bundles include Qt, OpenCV and FFmpeg. Ubuntu installs runtime dependencies through apt.
 Source code archives are for developers; use the files above to install the app.
 Installers are unsigned; Mac bundles use an ad-hoc signature and are not notarized.
+If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**
+for ASCII Video, following [Apple's instructions](https://support.apple.com/en-us/102445).
 Use the release's `SHA256SUMS.txt` to check downloads. Uninstall Windows through Settings → Apps;
 on Mac remove the app from Applications; on Ubuntu run `sudo apt remove ascii-video`.
 
