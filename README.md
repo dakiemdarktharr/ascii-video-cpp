@@ -156,7 +156,8 @@ Use the installer to distribute the app, rather than copying only the executable
 [Full MP4](assets/readme-demo/ascii-video.mp4) · [Source notes](assets/readme-demo/README.md)
 
 The existing demonstration assets predate the new quality defaults. Core conversion uses a bounded frame queue,
-immutable glyph atlases and worker-local OpenCV scratch buffers. Qt Widgets runs the desktop UI; OpenCV decodes
+bundled glyph atlases and worker-local OpenCV scratch buffers.
+The glyph bitmaps are generated from DejaVu Sans Mono and stay identical across platform font engines. Qt Widgets runs the desktop UI; OpenCV decodes
 media; an external FFmpeg process encodes H.264 and preserves audio. `ASCII_FFMPEG` can override FFmpeg's path.
 
 Application source is MIT licensed. Bundled binaries include third-party GPL components; corresponding sources,

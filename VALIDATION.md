@@ -1,3 +1,36 @@
+# Version 1.2.0 validation
+
+Checks on 2026-10-05 (Asia/Saigon), Windows 11 x64. The previous version's record follows below.
+
+- Release build with GCC 15.2.0, Qt 6.10.1, OpenCV 4.13.0; compiler warnings treated as errors.
+- 16 Qt Test entries passed (14 behavior cases plus initialization/cleanup).
+- Subtitle regression compares the rendered stroke envelope with a synthetic 1920×1080 subtitle
+  image and requires at least 1.25× the overlap of the old 100-column default, plus an absolute
+  overlap above 0.45. This allows OpenCV 4/5 resampling differences without accepting worse output.
+- Fine output dimensions verified at 1920×1080 and 3840×2160; out-of-range density rejected.
+- Video/audio conversion and mute verified by requiring an audio stream with FFmpeg.
+- Existing tests verify decoding errors, missing codecs, nominal FPS, frame ordering, downloads,
+  exports, GIF budgets, bounded queue occupancy, cancellation and responsive UI actions.
+- New UI checks verify resolution presets and a first-frame preview before creating the full output.
+- Real CLI 4K conversions saved a 3840×2160 PNG and a 24-frame H.264 MP4 at 24 FPS with AAC audio. Missing output and invalid columns report errors.
+- All 16 tests passed against packaged DLLs, Qt plugins and FFmpeg with a system-only PATH.
+- Local NSIS packaging produced a self-contained installer. The installation smoke test declined
+  to overwrite an existing v1.1.0 user installation; installation/uninstallation is tested on CI runners.
+- clang-format, Python compilation and shell syntax checks passed. The generated UI screenshot was reviewed.
+
+GitHub Actions builds and tests Windows, Ubuntu and both Mac architectures and verifies installer runtimes.
+Docker tests build and run the test/runtime/gui targets, including an actual conversion and browser-desktop health.
+Current run results are linked in the release and repository Actions tab; failed runs remain available for diagnosis.
+The local machine does not have Docker or macOS, so those checks run on GitHub-hosted runners.
+
+The audit found and fixed loss of audio, insufficient default sampling, missing first-frame previews,
+platform font differences, macOS signedness warnings and a deprecated assertion in newer Qt Test.
+ASCII retains the visual shape of text; it cannot guarantee recovery of tiny/blurred text. Variable frame
+rate timestamps are represented by nominal FPS. Native file-picker gestures and third-party player
+playback are not covered by automated controller tests. Installers have no trusted code-signing certificate.
+
+---
+
 # Validation record
 
 Local checks on 2026-09-08 (UTC+07), Windows 11 x64.
