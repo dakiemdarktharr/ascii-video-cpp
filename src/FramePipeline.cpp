@@ -39,9 +39,7 @@ ConversionResult FramePipeline::run(const QString &input, const QString &output,
     if (!staging.isValid())
         throw std::runtime_error("Cannot create output staging directory.");
     const auto staged = staging.filePath(result.input.video ? "output.mp4" : "output.png");
-    const QSize size(settings.columns * AsciiConverter::glyphWidth,
-                     AsciiConverter::rowsFor(result.input.width, result.input.height, settings.columns) *
-                         AsciiConverter::glyphHeight);
+    const QSize size = AsciiConverter::outputSize(result.input.width, result.input.height, settings);
     const auto atlasStart = Clock::now();
     const AsciiConverter prototype(settings);
     result.metrics.atlasMs = ms(atlasStart);
@@ -186,7 +184,14 @@ ConversionResult FramePipeline::run(const QString &input, const QString &output,
         const auto finishing = Clock::now();
         if (encoder)
             encoder->finish();
-        copyOutput(staged, output);
+        QString completed = staged;
+        if (encoder && settings.keepAudio) {
+            completed = staging.filePath("with-audio.mp4");
+            runFfmpeg({"-i", staged, "-i", input, "-map", "0:v:0", "-map", "1:a:0?", "-c:v", "copy", "-c:a",
+                       "aac", "-b:a", "192k", "-map_metadata", "-1", "-movflags", "+faststart", completed},
+                      stop);
+        }
+        copyOutput(completed, output);
         result.metrics.encodeMs += ms(finishing);
         result.metrics.totalMs = ms(begin);
         if (progress)

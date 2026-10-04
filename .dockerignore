@@ -1,0 +1,10 @@
+.git
+build*
+out
+.cache
+.vs
+.vscode
+vcpkg_installed
+*.log
+.env*
+docker-data

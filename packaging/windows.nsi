@@ -12,6 +12,8 @@ VIAddVersionKey "ProductName" "ASCII Video C++"
 VIAddVersionKey "FileDescription" "ASCII Video C++ installer"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "LegalCopyright" "KoiSee and contributors"
+!define MUI_ICON "${ICON}"
+!define MUI_UNICON "${ICON}"
 !define MUI_ABORTWARNING
 !define MUI_FINISHPAGE_RUN "$INSTDIR\ascii-video-cpp.exe"
 !insertmacro MUI_PAGE_WELCOME

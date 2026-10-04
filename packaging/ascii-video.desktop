@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ASCII Video
+Comment=Convert videos and images into character art
+Exec=ascii-video-cpp %f
+Icon=ascii-video
+Terminal=false
+Categories=AudioVideo;Video;Graphics;
+MimeType=video/mp4;video/quicktime;video/x-matroska;image/png;image/jpeg;

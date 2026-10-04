@@ -91,7 +91,7 @@ MediaOutput::MediaOutput(const QString &path, QSize size, double fps, std::atomi
                      "-c:v",
                      codec};
     if (codec == "libx264")
-        args << "-preset" << "veryfast" << "-crf" << "20";
+        args << "-preset" << "veryfast" << "-crf" << "16";
     args << "-threads" << "2" << "-pix_fmt" << "yuv420p" << "-movflags" << "+faststart" << path;
     process_.start(ffmpegExecutable(), args);
     if (!process_.waitForStarted(10000))

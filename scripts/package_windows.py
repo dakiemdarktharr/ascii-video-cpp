@@ -29,7 +29,7 @@ def main():
     parser.add_argument("--build-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--prefix", type=Path, default=Path("C:/msys64/mingw64"))
-    parser.add_argument("--version", default="1.1.0")
+    parser.add_argument("--version", default="1.2.0")
     parser.add_argument("--skip-source-download", action="store_true",
                         help="CI smoke builds only; do not publish these installers")
     args = parser.parse_args()
@@ -187,7 +187,7 @@ def main():
     env = os.environ.copy()
     env["PATH"] = str(tools) + os.pathsep + env.get("PATH", "")
     subprocess.run([str(tools / "makensis.exe"), "-V2", f"-DVERSION={args.version}",
-                    f"-DPAYLOAD={stage}", f"-DOUTPUT={output}", str(root / "packaging/windows.nsi")],
+                    f"-DPAYLOAD={stage}", f"-DICON={root / 'assets/icons/app.ico'}", f"-DOUTPUT={output}", str(root / "packaging/windows.nsi")],
                    env=env, check=True)
     assets = [output / "Setup.exe", output / "runtime-manifest.json"] + sorted(output.glob("*-source*.zip"))
     (output / "SHA256SUMS.txt").write_text("".join(

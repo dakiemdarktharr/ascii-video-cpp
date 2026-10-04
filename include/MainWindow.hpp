@@ -16,6 +16,7 @@ class QLineEdit;
 class QComboBox;
 class QCheckBox;
 class QTimer;
+class QScrollArea;
 namespace ascii {
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -37,13 +38,15 @@ class MainWindow : public QMainWindow {
     void resizeEvent(QResizeEvent *event) override;
 
   private:
-    enum class Operation { Import, Convert, Download, Export };
+    enum class Operation { Import, Preview, Convert, Download, Export };
     struct Mailbox {
         bool done = false;
         QString error, message;
         std::optional<MediaInfo> imported;
         std::optional<ConversionResult> result;
         std::optional<Progress> progress;
+        cv::Mat sourceFrame;
+        QImage preview;
     };
     QLabel *preview_, *file_, *status_, *stats_;
     QPushButton *import_, *convert_, *download_, *github_, *stopButton_;
@@ -53,6 +56,13 @@ class MainWindow : public QMainWindow {
     QLineEdit *charset_;
     QComboBox *foreground_;
     QCheckBox *color_;
+    QCheckBox *sharpen_, *audio_;
+    QComboBox *resolution_, *detail_, *zoom_;
+    QLabel *sizeLabel_;
+    QScrollArea *previewScroll_;
+    QTimer *previewTimer_;
+    cv::Mat sourceFrame_;
+    bool previewPending_ = false;
     QWidget *controls_;
     QTimer *timer_;
     QTemporaryDir outputDir_;
@@ -70,5 +80,7 @@ class MainWindow : public QMainWindow {
     void updateButtons();
     void showPreview(const QImage &image);
     Settings settings() const;
+    void settingsChanged();
+    void refreshPreview();
 };
 } // namespace ascii

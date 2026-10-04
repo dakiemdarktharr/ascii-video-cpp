@@ -1,7 +1,14 @@
 name: Build and test
 on:
   push:
+    branches: [main, "codex/**"]
   pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -10,17 +17,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y ninja-build qt6-base-dev libopencv-dev ffmpeg fonts-dejavu-core
-      - name: Configure clean build
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
-      - name: Build
-        run: cmake --build build --parallel 4
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
-      - name: Check demo assets
+        run: sudo apt-get update && sudo apt-get install -y ninja-build qt6-base-dev libopencv-dev ffmpeg fonts-dejavu-core dpkg-dev xvfb
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DCMAKE_INSTALL_PREFIX=/usr
+      - run: cmake --build build --parallel 4
+      - run: ctest --test-dir build --output-on-failure
+      - name: Build and install DEB
         run: |
-          ffprobe -v error -show_entries stream=width,height,r_frame_rate -of json assets/demo-ascii.mp4
-          ffmpeg -v error -i assets/demo.gif -f null -
+          cd build
+          cpack -G DEB
+          sudo apt-get install -y ./*.deb
+          QT_QPA_PLATFORM=offscreen /usr/bin/ascii-video-cpp --version
+          QT_QPA_PLATFORM=offscreen /usr/bin/ascii-video-cpp --convert ../assets/demo-source.png --output installed-smoke.png --width 1920
+          test -s installed-smoke.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-linux-x64
+          path: build/*.deb
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -40,27 +53,32 @@ jobs:
           msystem: MINGW64
           update: true
           install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-qt6-base
-            mingw-w64-x86_64-opencv
-            mingw-w64-x86_64-ffmpeg
-            mingw-w64-x86_64-python
-            mingw-w64-x86_64-nsis
-      - name: Configure clean build
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-qt6-base mingw-w64-x86_64-opencv mingw-w64-x86_64-ffmpeg
+            mingw-w64-x86_64-python mingw-w64-x86_64-nsis
+      - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
-      - name: Build
-        run: cmake --build build --parallel 4
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+      - run: cmake --build build --parallel 4
+      - run: ctest --test-dir build --output-on-failure
       - name: Package Windows installer
+        env:
+          RELEASE_BUILD: ${{ inputs.release == true && 'true' || 'false' }}
         run: |
           echo "MINGW_PACKAGE_PREFIX=$(cygpath -m /mingw64)" >> "$GITHUB_ENV"
-          python scripts/package_windows.py --build-dir build --output-dir build-package --prefix "$(cygpath -m /mingw64)" --skip-source-download
+          extra=()
+          if [ "$RELEASE_BUILD" != true ]; then extra+=(--skip-source-download); fi
+          python scripts/package_windows.py --build-dir build --output-dir build-package --prefix "$(cygpath -m /mingw64)" "${extra[@]}"
       - name: Test installed application without developer PATH
         shell: pwsh
         run: ./scripts/test_installer.ps1 -PackageDir build-package -BuildDir build -MingwPrefix $env:MINGW_PACKAGE_PREFIX
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-windows-x64
+          compression-level: 0
+          path: |
+            build-package/Setup.exe
+            build-package/runtime-manifest.json
+            build-package/*-source*.zip
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -70,3 +88,76 @@ jobs:
             build/test-results.*
             build-package/installed-tests.txt
             build-package/installed-version.txt
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install cmake ninja qt opencv ffmpeg dylibbundler
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+      - run: cmake --build build --parallel 3
+      - run: ctest --test-dir build --output-on-failure
+      - name: Build self-contained DMG
+        env:
+          RELEASE_BUILD: ${{ inputs.release == true && 'true' || 'false' }}
+        run: |
+          extra=()
+          if [ "$RELEASE_BUILD" != true ]; then extra+=(--skip-source-download); fi
+          python3 scripts/package_macos.py --build-dir build --output-dir build-package "${extra[@]}"
+      - name: Smoke test bundled runtime with isolated PATH
+        run: |
+          export QT_QPA_PLATFORM=offscreen
+          unset QT_PLUGIN_PATH ASCII_FFMPEG DYLD_LIBRARY_PATH
+          export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+          "build-package/ASCII Video.app/Contents/MacOS/ascii-video-cpp" --version
+          "build-package/ASCII Video.app/Contents/MacOS/ascii-video-cpp" --convert assets/demo-ascii.mp4 --output build-package/installed-smoke.mp4 --width 1280
+          test -s build-package/installed-smoke.mp4
+          /usr/bin/hdiutil verify build-package/*.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-macos-${{ matrix.arch }}
+          compression-level: 0
+          path: |
+            build-package/*.dmg
+            build-package/*-runtime-manifest.json
+            build-package/*-dependency-sources-*.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-${{ matrix.arch }}-test-log
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build/test-results.*
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Container tests
+        run: docker build --target test -t ascii-test . && docker run --rm ascii-test
+      - name: Headless conversion
+        run: |
+          docker build --target runtime -t ascii-runtime .
+          mkdir docker-data
+          chmod 777 docker-data
+          cp assets/demo-source.png docker-data/source.png
+          docker run --rm -v "$PWD/docker-data:/data" ascii-runtime --convert /data/source.png --output /data/ascii.png
+          test -s docker-data/ascii.png
+      - name: Browser desktop smoke test
+        run: |
+          docker compose up --build -d app
+          trap 'docker compose logs app; docker compose down' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:6080/vnc.html >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:6080/vnc.html >/dev/null
+          docker compose exec -T app pgrep -x ascii-video-cpp

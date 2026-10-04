@@ -26,7 +26,7 @@ public static class InstallerWindow {
         EnumWindows((window, parameter) => {
             uint owner; GetWindowThreadProcessId(window, out owner);
             var title = new StringBuilder(256); GetWindowText(window, title, title.Capacity);
-            if (owner == process && title.ToString() == "ascii-video-cpp") { result = window; return false; }
+            if (owner == process && title.ToString() == "ASCII Video") { result = window; return false; }
             return true;
         }, IntPtr.Zero);
         return result;
@@ -63,7 +63,7 @@ try {
     $versionText = $app.StandardOutput.ReadToEnd()
     $versionError = $app.StandardError.ReadToEnd()
     Set-Content -LiteralPath $version -Value $versionText
-    if ($app.ExitCode -ne 0 -or $versionText -notmatch 'ascii-video-cpp 1\.1\.0') {
+    if ($app.ExitCode -ne 0 -or $versionText -notmatch 'ascii-video-cpp 1\.2\.0') {
         throw "Installed app version check failed: exit $($app.ExitCode), $versionError"
     }
     $app.Dispose()

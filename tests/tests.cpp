@@ -4,11 +4,13 @@
 #include "MainWindow.hpp"
 #include "MediaOutput.hpp"
 #include <QApplication>
+#include <QComboBox>
 #include <QDir>
 #include <QFile>
 #include <QFontInfo>
 #include <QPainter>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimer>
@@ -22,6 +24,8 @@ class Tests : public QObject {
     ascii::Settings config() {
         ascii::Settings s;
         s.columns = 24;
+        s.fineDetail = false;
+        s.sharpen = false;
         s.threads = 4;
         s.queueCapacity = 3;
         return s;
@@ -87,6 +91,72 @@ class Tests : public QObject {
         QCOMPARE(ascii::AsciiConverter::rowsFor(100, 100, 100), 50);
         QCOMPARE(ascii::AsciiConverter::rowsFor(1000, 1, 8), 1);
         QVERIFY_EXCEPTION_THROWN(ascii::AsciiConverter::rowsFor(0, 100, 100), std::invalid_argument);
+    }
+    void highResolutionText() {
+        ascii::Settings fine;
+        QCOMPARE(ascii::AsciiConverter::outputSize(1920, 1080, fine), QSize(1920, 1080));
+        fine.columns = 960;
+        QCOMPARE(ascii::AsciiConverter::outputSize(1920, 1080, fine), QSize(3840, 2160));
+        fine.columns = 961;
+        QVERIFY_EXCEPTION_THROWN(fine.validate(), std::invalid_argument);
+        fine.columns = 480;
+        fine.sharpen = false;
+        cv::Mat letters(1080, 1920, CV_8UC3, cv::Scalar(0, 0, 0));
+        cv::putText(letters, "Readable subtitles 123", {180, 500}, cv::FONT_HERSHEY_SIMPLEX, 1.5,
+                    {255, 255, 255}, 3, cv::LINE_AA);
+        auto measure = [&](const ascii::Settings &settings) {
+            const auto rendered = ascii::AsciiConverter(settings).convert(letters);
+            // Recover the spatial envelope of the glyphs, then compare it to subtitle strokes.
+            cv::Mat rgb(rendered.image.height(), rendered.image.width(), CV_8UC3,
+                        const_cast<uchar *>(rendered.image.constBits()),
+                        static_cast<size_t>(rendered.image.bytesPerLine()));
+            cv::Mat gray, resized;
+            cv::cvtColor(rgb, gray, cv::COLOR_RGB2GRAY);
+            cv::resize(gray, resized, letters.size());
+            cv::GaussianBlur(resized, resized, {15, 15}, 3);
+            cv::Mat mask;
+            cv::threshold(resized, mask, 5, 255, cv::THRESH_BINARY);
+            cv::Mat original;
+            cv::cvtColor(letters, original, cv::COLOR_BGR2GRAY);
+            cv::threshold(original, original, 60, 255, cv::THRESH_BINARY);
+            cv::Mat intersection, combined;
+            cv::bitwise_and(mask, original, intersection);
+            cv::bitwise_or(mask, original, combined);
+            return static_cast<double>(cv::countNonZero(intersection)) / cv::countNonZero(combined);
+        };
+        auto old = fine;
+        old.columns = 100;
+        old.fineDetail = false;
+        QVERIFY2(measure(fine) > measure(old) * 1.5,
+                 "Fine ASCII must recover subtitle strokes better than the old 100-column default.");
+        const auto demo = qEnvironmentVariable("ASCII_TEXT_DEMO_DIR");
+        if (!demo.isEmpty()) {
+            QDir().mkpath(demo);
+            cv::Mat rgb;
+            cv::cvtColor(letters, rgb, cv::COLOR_BGR2RGB);
+            ascii::saveImage(
+                QImage(rgb.data, rgb.cols, rgb.rows, static_cast<qsizetype>(rgb.step), QImage::Format_RGB888),
+                demo + "/source.png");
+            ascii::saveImage(ascii::AsciiConverter(fine).convert(letters).image, demo + "/fine.png");
+            ascii::saveImage(ascii::AsciiConverter(old).convert(letters).image, demo + "/old.png");
+        }
+    }
+    void audioPreservation() {
+        const auto input = files_.filePath("sound.mp4");
+        ascii::runFfmpeg({"-f", "lavfi", "-i", "color=size=96x64:rate=24:duration=0.5", "-f", "lavfi", "-i",
+                          "sine=frequency=440:duration=0.5", "-c:v", "libx264", "-c:a", "aac", "-shortest",
+                          input},
+                         stop_);
+        const auto output = files_.filePath("sound-ascii.mp4");
+        ascii::FramePipeline{}.run(input, output, config(), stop_);
+        // A required audio map fails if the output has lost sound.
+        ascii::runFfmpeg({"-i", output, "-map", "0:a:0", "-f", "null", "-"}, stop_);
+        auto muted = config();
+        muted.keepAudio = false;
+        const auto silent = files_.filePath("silent-ascii.mp4");
+        ascii::FramePipeline{}.run(input, silent, muted, stop_);
+        QVERIFY_EXCEPTION_THROWN(ascii::runFfmpeg({"-i", silent, "-map", "0:a:0", "-f", "null", "-"}, stop_),
+                                 std::runtime_error);
     }
     void terminalColor() {
         cv::Mat frame(16, 16, CV_8UC3, cv::Scalar(0, 0, 255));
@@ -232,9 +302,16 @@ class Tests : public QObject {
         auto *download = window.findChild<QPushButton *>("downloadButton");
         auto *github = window.findChild<QPushButton *>("githubButton");
         QVERIFY(convert && download && github);
-        QVERIFY(QFontInfo(convert->font()).fixedPitch());
+        QCOMPARE(convert->text(), QString("Create ASCII video"));
         QVERIFY(!convert->isEnabled());
         QVERIFY(!download->isEnabled());
+        auto *resolution = window.findChild<QComboBox *>("resolutionCombo");
+        auto *columns = window.findChild<QSpinBox *>("columnsSpin");
+        QVERIFY(resolution && columns);
+        resolution->setCurrentIndex(2);
+        QCOMPARE(columns->value(), 960);
+        resolution->setCurrentIndex(0);
+        QCOMPARE(columns->value(), 320);
         int ticks = 0;
         QTimer heartbeat;
         connect(&heartbeat, &QTimer::timeout, [&] { ++ticks; });
@@ -243,6 +320,8 @@ class Tests : public QObject {
             window.importPath(input);
             QTRY_VERIFY_WITH_TIMEOUT(!window.busy(), 15000);
             QVERIFY2(convert->isEnabled(), qPrintable(window.statusText()));
+            QVERIFY(!window.converted());
+            QVERIFY(window.statusText().contains("Preview ready"));
             QTest::mouseClick(convert, Qt::LeftButton);
             QVERIFY(!download->isEnabled());
             QTRY_VERIFY_WITH_TIMEOUT(!window.busy(), 30000);
