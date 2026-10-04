@@ -1,155 +1,333 @@
-# ASCII Video
+# ascii-video-cpp
 
-<img src="assets/icons/app.png" width="72" alt="ASCII Video app icon">
+This repository preserves the original **v1.1.0** app. The improved Full HD/4K app, English interface,
+new icon, audio support and Docker setup are now in [ascii_video_4k](https://github.com/dakiemdarktharr/ascii_video_4k).
+The two Windows apps use separate installation folders and can coexist. This repository's `main`
+contains the original app; earlier improvement commits remain in Git history.
 
-Convert MP4 videos and images into pure ASCII character art, with a desktop app or Docker.
-Full HD output, fine characters and edge enhancement help retain subtitles and small text.
-The saved MP4 keeps the original sound by default.
+![ASCII animation converted from the supplied project clip](assets/readme-demo/preview.gif)
 
-![Desktop app](assets/ui-preview.png)
+[Watch or download the full MP4](assets/readme-demo/ascii-video.mp4) · [Poster](assets/readme-demo/poster.png) · [Demo source notes](assets/readme-demo/README.md)
 
-## Install
+A C++20 desktop app that converts local images and videos into rendered ASCII art.
+Qt6 Widgets provides a terminal-style window; OpenCV decodes and prepares frames;
+an external FFmpeg process writes H.264 MP4 and GIF.
 
-Download installers from [GitHub Releases](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest).
+**GitHub displays the demo and stores the assets. GitHub does not run this C++ desktop application.**
 
-| System | Download | Install |
-| --- | --- | --- |
-| Windows 10/11 x64 | [Setup.exe](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/Setup.exe) | Run it, then open ASCII Video C++ from the Start Menu. |
-| Ubuntu 24.04 x64 | [ascii-video_1.2.2_amd64.deb](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/latest/download/ascii-video_1.2.2_amd64.deb) | Run `sudo apt install ./ascii-video_1.2.2_amd64.deb`, then open ASCII Video. |
+**Cài trên Windows 10/11 x64:** tải [Setup.exe v1.1.0](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/download/v1.1.0/Setup.exe),
+chạy bộ cài rồi mở **ASCII Video C++** trong Start Menu. Bộ cài kèm Qt, OpenCV và FFmpeg;
+không cần VS Code, compiler hay MSYS2 để dùng app.
 
-The Windows installer includes Qt, OpenCV and FFmpeg. Ubuntu installs runtime dependencies through apt.
-Source code archives are for developers; use the files above to install the app.
-The Windows installer has no trusted code-signing certificate.
-Use the release's `SHA256SUMS.txt` to check downloads. Uninstall Windows through Settings → Apps;
-on Ubuntu run `sudo apt remove ascii-video`.
+[Cài bằng Setup.exe](#install-on-windows) · [Cách sử dụng](#use-the-app) ·
+[Export cho GitHub Profile](#github-profile-export) · [Build từ source](#build-on-windows) · [Ubuntu](#build-on-ubuntu)
+
+## Install on Windows
+
+1. Mở [Release v1.1.0](https://github.com/dakiemdarktharr/ascii-video-cpp/releases/tag/v1.1.0) và tải **Setup.exe** trong Assets.
+   `Source code (zip)` là mã nguồn, không phải bộ cài.
+2. Chạy `Setup.exe`, chọn thư mục nếu cần, bấm **Install** rồi **Finish**.
+   Mặc định app cài cho tài khoản hiện tại, không cần quyền administrator.
+3. Mở **ASCII Video C++** từ Start Menu. Những lần sau chỉ cần mở lại shortcut này.
+4. Dùng **Import → Convert → Download** theo hướng dẫn dưới đây.
+5. Gỡ app trong **Settings → Apps → Installed apps → ASCII Video C++ → Uninstall**,
+   hoặc dùng shortcut **Uninstall** trong Start Menu. File do bạn tự lưu sẽ được giữ lại.
+
+Bộ cài chưa được ký bằng chứng thư code-signing, nên Windows có thể hiển thị cảnh báo
+nhà phát hành chưa xác định. Chỉ tải từ trang Releases của repository này; file `SHA256SUMS.txt`
+được cung cấp để đối chiếu bằng `Get-FileHash .\Setup.exe -Algorithm SHA256` trong PowerShell.
+
+Khi có bản mới, đóng app trước rồi chạy bộ cài mới vào cùng thư mục.
+Windows ARM64 và các phiên bản Windows cũ hơn chưa được kiểm thử.
 
 ## Use the app
 
-1. **Open video or image**, or drop a local file into the window. A first-frame ASCII preview appears.
-2. Choose **Video width**: HD, Full HD (default), or 4K. **Fine characters** gives twice as many
-   characters per line at the same output width as **Large characters**.
-3. Adjust brightness, contrast and color. **Make edges and text clearer** is enabled by default.
-   Choose **Actual size (100%)** to inspect subtitles in the preview; scroll to see the rest of the frame.
-4. Click **Create ASCII video** (or image). **Cancel** discards unfinished work.
-5. Click **Save video as...** to choose a permanent MP4 file. Save before closing: conversion results
-   stay in a temporary folder until saved. Images save as PNG.
+Sau khi mở app theo hướng dẫn bên dưới:
 
-**Keep original sound** converts the first source audio track to AAC; uncheck it for silent output.
-**More settings** contains characters per line (8–960), the character palette, CPU workers, and preview
-updates per second. Preview updates do not change the saved video's frame rate.
-Changing visual settings invalidates the previous conversion and updates the first-frame preview.
-After conversion, the preview shows a still frame; play the saved MP4 in your video player.
+1. **Import:** chọn ảnh hoặc MP4/video, hoặc kéo một file vào cửa sổ. Kiểm tra tên file,
+   kích thước và FPS/thời lượng hiển thị. Nút Convert chỉ bật khi import thành công.
+2. **Chỉnh thông số trước khi convert:** có thể giữ mặc định để thử lần đầu.
 
-**Export for GitHub...** writes a GIF, poster, full MP4 and README snippet into a local `github-export/`
-folder. Choose a parent folder where `github-export/` does not already exist, then upload the files yourself.
-GitHub hosts the source and downloads; the desktop conversion runs on your computer.
+   - **Columns:** số cột ký tự; nhiều cột cho thêm chi tiết nhưng tốn thời gian và dung lượng hơn.
+   - **Brightness / Contrast:** mặc định 0 / 1. Tăng brightness nếu ảnh ASCII quá tối.
+   - **Charset:** chuỗi từ ký tự thưa đến dày, mặc định ` .:-=+*#%@`.
+   - **Text:** chọn màu chữ xanh, trắng hoặc xám; bật **Source colors** để lấy màu từ video gốc.
+   - **Threads:** số worker CPU, mặc định 4. **Preview FPS** chỉ điều chỉnh tần suất preview,
+     không thay đổi FPS của MP4 xuất ra.
 
-### Readable text and resolution
+3. **Convert:** bắt đầu xử lý. Xem preview, progress, FPS xử lý, thời gian đã chạy và dung lượng
+   output ở cuối cửa sổ. **Stop** hủy tác vụ đang chạy; bản chuyển đổi dở không được coi là thành phẩm.
+4. **Download:** sau khi hoàn tất, chọn nơi lưu và tên file. Tên mặc định cho ảnh là `ascii-image.png`;
+   video xuất thành `ascii-video.mp4` đầy đủ. Video ASCII hiện **không có âm thanh**.
+5. **GitHub Profile:** chọn thời lượng GIF preview, giới hạn dung lượng và repository URL nếu có,
+   rồi chọn thư mục cha. App tạo `github-export/` cùng snippet để bạn tự upload.
+   Thư mục `github-export/` phải chưa tồn tại ở vị trí đó.
 
-The old default sampled only 100 columns. The new Full HD default samples **480 columns** with **4×8**
-pixel ASCII cells; the 4K preset samples **960 columns**. Every output pixel comes from a rendered ASCII
-character on black; no original image or OCR text is blended into the output.
-H.264 CRF 16 retains more fine detail. Output height follows the source aspect ratio, rounded to a character row:
+**Lưu trước khi đóng:** kết quả nằm trong thư mục tạm của app cho đến khi bạn dùng Download
+hoặc GitHub Profile. Đóng app sẽ xóa bản tạm. Preview chạy khi chuyển đổi; khi xong app hiển thị
+poster, chưa có thanh tua/phát lại. Mở MP4 đã Download bằng trình phát video để xem toàn bộ.
+
+Import, conversion, download and profile export run outside the UI thread. Brightness is an additive
+offset in [-255,255]; contrast in [0,4] is applied around gray 127.5 before clamping.
+The 8×16 glyph cell gives:
 
 ```text
-rows = round(input_height / input_width × columns / 2)
-output = columns × cell_width by rows × cell_height
+rows = round(input_height / input_width × columns × 8 / 16)
 ```
 
-A 1920×1080 input becomes exactly 1920×1080 or 3840×2160 with Fine characters. Portrait and unusual
-aspect ratios keep their shape; the names HD/4K describe output **width**, not a forced 16:9 canvas.
-Large characters use 8×16 cells. More pixels cannot recover text already too small or blurred in the source.
-For the best text detail, use 4K, Fine characters and edge enhancement. Conversion and file size increase
-with quality. A 2048-row and 32-megapixel guard limits extreme outputs; video length does not grow the frame queue.
-The nominal source frame rate is preserved. Variable-frame-rate timing is not reproduced exactly.
+Rounding introduces at most half a character row of aspect error. Characters are printable
+ASCII; multi-byte Unicode glyphs are rejected. Columns are 8–320 and rows have a 2048-row
+resource guard. Default workers: 4. The UI allows 1–32 workers.
 
-## Docker
+## Build on Windows
 
-Install Docker with Compose. No compiler or native dependencies are needed on the host.
+Phần này dành cho người muốn tự build hoặc sửa mã nguồn. Người dùng bộ cài có thể bỏ qua.
+
+### Cài lần đầu với MSYS2 / MinGW
+
+Đây là đường build đã được kiểm tra local và trong Windows CI.
+
+**1. Cài MSYS2.** Tải từ [msys2.org](https://www.msys2.org/), cài đặt, rồi mở
+**MSYS2 MINGW64** từ Start Menu. Các lệnh trong những khối `sh` dưới đây chạy trong
+cửa sổ MINGW64, không dán trực tiếp vào PowerShell.
+
+Cập nhật hệ thống:
 
 ```sh
-mkdir -p docker-data
-# Linux hosts: allow the container user to write this media folder.
-chmod 777 docker-data
-docker compose up --build -d app
+pacman -Syu
 ```
 
-Open [the local browser desktop](http://localhost:6080/vnc.html?autoconnect=true&resize=remote).
-Place videos in `docker-data`, open `/data` in the app's file picker, and save outputs under `/data`.
-On Windows, create `docker-data` in Explorer or PowerShell; the chmod command is only for Linux.
-The browser desktop listens on localhost. Stop it with `docker compose down`.
+Nếu MSYS2 yêu cầu đóng cửa sổ để cập nhật, làm theo hướng dẫn, mở lại **MINGW64** rồi chạy
+`pacman -Syu` lần nữa đến khi cập nhật xong.
 
-Headless conversion and all functional tests:
-
-```sh
-docker compose run --rm --build convert --convert /data/input.mp4 --output /data/ascii.mp4 --width 3840
-docker compose run --rm --build test
-```
-
-The Dockerfile has build, test, runtime and gui targets. Runtime has no compiler or source tree:
-
-```sh
-docker build --target runtime -t ascii-video .
-docker run --rm -v "$PWD/docker-data:/data" ascii-video --convert /data/input.mp4 --output /data/ascii.mp4
-```
-
-## Command line
-
-```sh
-ascii-video-cpp --convert input.mp4 --output ascii.mp4 --width 1920
-ascii-video-cpp --convert input.mp4 --output ascii.mp4 --width 3840 --mute
-ascii-video-cpp --convert photo.png --output ascii.png --classic --columns 240
-ascii-video-cpp --terminal photo.png --columns 100 --ansi
-```
-
-On servers set `QT_QPA_PLATFORM=offscreen`. Without options the app opens its desktop window.
-See `--help` for worker count, edge enhancement and other options.
-
-## Build from source
-
-C++20, CMake 3.20+, Qt 6.2+ Widgets/Test, OpenCV 4.x or 5.x and FFmpeg with libx264 are required.
-
-**Windows, MSYS2 MINGW64 shell:**
+**2. Cài compiler, Qt6, OpenCV, CMake và FFmpeg:**
 
 ```sh
 pacman -S --needed git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake \
-  mingw-w64-x86_64-ninja mingw-w64-x86_64-qt6-base mingw-w64-x86_64-opencv \
-  mingw-w64-x86_64-ffmpeg mingw-w64-x86_64-python mingw-w64-x86_64-nsis
+  mingw-w64-x86_64-ninja mingw-w64-x86_64-qt6-base \
+  mingw-w64-x86_64-opencv mingw-w64-x86_64-ffmpeg
 ```
 
-**Ubuntu 24.04:**
-
-```sh
-sudo apt update
-sudo apt install build-essential cmake ninja-build qt6-base-dev libopencv-dev ffmpeg fonts-dejavu-core
-```
-
-Then on each system:
+**3. Tải source, build và chạy test:**
 
 ```sh
 git clone https://github.com/dakiemdarktharr/ascii-video-cpp.git
 cd ascii-video-cpp
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 4
 ctest --test-dir build --output-on-failure
 ```
 
-Run `./build/ascii-video-cpp` on Linux or `./build/ascii-video-cpp.exe` on Windows.
-Windows development builds need MINGW64's bin directory on PATH.
-Use the installer to distribute the app, rather than copying only the executable.
+Nếu đã dùng **Code → Download ZIP**, giải nén trước rồi dùng `cd` vào thư mục chứa
+`CMakeLists.txt`; bỏ qua hai dòng `git clone` và `cd ascii-video-cpp`.
+Chỉ chuyển sang bước mở app khi build thành công. Test thành công sẽ báo `100% tests passed`.
 
-[Packaging and release process](packaging/README.md) · [Validation record](VALIDATION.md)
+**4. Mở app:**
 
-## Demo
+```sh
+./build/ascii-video-cpp.exe
+```
 
-![ASCII animation](assets/readme-demo/preview.gif)
+Một cửa sổ desktop sẽ mở. Không cần mở VS Code hay Visual Studio.
 
-[Full MP4](assets/readme-demo/ascii-video.mp4) · [Source notes](assets/readme-demo/README.md)
+### Mở lại app những lần sau
 
-The existing demonstration assets predate the new quality defaults. Core conversion uses a bounded frame queue,
-bundled glyph atlases and worker-local OpenCV scratch buffers.
-The glyph bitmaps are generated from DejaVu Sans Mono and stay identical across platform font engines. Qt Widgets runs the desktop UI; OpenCV decodes
-media; an external FFmpeg process encodes H.264 and preserves audio. `ASCII_FFMPEG` can override FFmpeg's path.
+Không cần cài hay build lại nếu source chưa thay đổi. Mở **MINGW64**, `cd` vào repository
+và chạy `./build/ascii-video-cpp.exe`.
 
-Application source is MIT licensed. Bundled binaries include third-party GPL components; corresponding sources,
-build recipes and runtime manifests are included in release assets. See each bundle's third-party notices.
+Hoặc mở PowerShell tại thư mục repository và chạy:
+
+```powershell
+$env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
+.\build\ascii-video-cpp.exe
+```
+
+Nếu MSYS2 được cài ở chỗ khác, thay `C:\msys64` bằng thư mục cài thực tế.
+Dòng PATH chỉ áp dụng cho cửa sổ PowerShell hiện tại. Không copy riêng file EXE sang máy khác:
+app còn cần các DLL của Qt/OpenCV/MinGW, Qt platform plugin và chương trình FFmpeg.
+
+### Lỗi thường gặp
+
+| Hiện tượng | Cách xử lý |
+| --- | --- |
+| `cmake`, `g++` hoặc `ninja` không được nhận diện | Mở đúng **MSYS2 MINGW64** và hoàn tất bước cài dependency. |
+| Thiếu DLL hoặc Qt platform plugin khi mở EXE | Chạy từ MINGW64, hoặc dùng lệnh PowerShell có PATH ở trên. Không trộn thư viện MSVC với MinGW. |
+| App báo không tìm thấy FFmpeg | Chạy `ffmpeg -version` trong cùng shell; cài package FFmpeg ở bước 2 nếu thiếu. |
+| Không mở được video/codec | Thử video MP4 H.264; kiểm tra file có phát được bằng trình phát video. Codec hỗ trợ phụ thuộc backend được cài. |
+| Export báo `github-export already exists` | Chọn thư mục cha khác hoặc đổi tên thư mục export cũ trước. |
+| GIF vượt giới hạn dung lượng | Giảm preview xuống 5–8 giây hoặc tăng ngân sách trong hộp thoại export. |
+
+### MSVC + vcpkg manifest (provided, not locally built)
+
+Install Visual Studio 2022 with Desktop development with C++, CMake and Ninja.
+Bootstrap [vcpkg](https://github.com/microsoft/vcpkg), set `VCPKG_ROOT`, and use a
+Developer PowerShell for Visual Studio:
+
+```powershell
+cmake -S . -B build-msvc -G Ninja -DCMAKE_BUILD_TYPE=Release `
+  "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+  -DVCPKG_TARGET_TRIPLET=x64-windows
+cmake --build build-msvc --parallel 4
+$env:PATH = "$PWD/build-msvc/vcpkg_installed/x64-windows/bin;$env:PATH"
+$env:QT_PLUGIN_PATH = "$PWD/build-msvc/vcpkg_installed/x64-windows/Qt6/plugins"
+ctest --test-dir build-msvc --output-on-failure
+.\build-msvc\ascii-video-cpp.exe
+```
+
+The pinned `vcpkg.json` installs Qt Widgets/Test/PNG and OpenCV JPEG/PNG/FFmpeg support.
+Its Qt feature selection follows the [qtbase port manifest](https://github.com/microsoft/vcpkg/blob/04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4/ports/qtbase/vcpkg.json).
+**Install the FFmpeg command-line executable separately** and add it to PATH. The OpenCV FFmpeg
+library dependency does not replace that executable. Check `ffmpeg -encoders` for
+`libx264` and `gif`. Alternatively set `ASCII_FFMPEG` to the executable's full path.
+A missing executable/codec produces an error instead of a silent fallback to a different output format.
+
+## Build on Ubuntu
+
+```sh
+sudo apt-get update
+sudo apt-get install -y git cmake ninja-build g++ qt6-base-dev libopencv-dev ffmpeg fonts-dejavu-core
+git clone https://github.com/dakiemdarktharr/ascii-video-cpp.git
+cd ascii-video-cpp
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+./build/ascii-video-cpp
+```
+
+CMake requires 3.20+, Qt 6.2+ and OpenCV 4.x or 5.x. The Windows and Ubuntu CI jobs
+both configure a fresh build, compile with warnings treated as errors and run CTest.
+Ubuntu also decodes the checked-in demo assets.
+Ubuntu, macOS and MSVC have not been executed in the local Windows environment; see
+[validation notes](VALIDATION.md) for the actual checks.
+
+## Terminal output
+
+Print the first image/video frame as plain grayscale characters or ANSI truecolor:
+
+```sh
+./build/ascii-video-cpp --terminal assets/demo-source.png --columns 80
+./build/ascii-video-cpp --terminal assets/demo-source.png --columns 80 --ansi
+```
+
+Use `QT_QPA_PLATFORM=offscreen` on a headless host. ANSI output requires a truecolor terminal.
+Desktop colored rendering uses source pixel colors; ANSI output encodes colors as escape sequences.
+
+## GitHub Profile export
+
+Choose a parent directory with no existing `github-export` child. The exporter stages files in
+a temporary directory and only publishes the folder after all outputs pass their limits.
+It refuses to overwrite an existing export.
+
+Image:
+
+```text
+github-export/
+├── ascii-profile.png
+└── profile-snippet.md
+```
+
+Video:
+
+```text
+github-export/
+├── ascii-profile.gif
+├── ascii-video.mp4
+├── preview.png
+└── profile-snippet.md
+```
+
+The default GIF uses the first 8 seconds (or the whole video if shorter), 10 FPS,
+640-pixel width and a 5 MiB budget. Choose 1–15 seconds and a 1–20 MiB budget in the dialog.
+The library additionally exposes width and FPS. It restricts input duration before palette
+generation, uses a 64-color palette, then reduces width/FPS if necessary. If the GIF still
+cannot fit, export fails and leaves no completed folder. Full-length MP4 is kept separately.
+
+Enter `owner/repository` or its GitHub URL to produce real repository links; otherwise
+the snippet uses `YOUR_GITHUB_USERNAME/YOUR_REPOSITORY`. Links use `HEAD` so they follow
+the default branch. Upload the complete `github-export` directory at the repository root,
+then copy the snippet into its README (for a profile, the repository normally matches your username).
+
+ZIP creation and upload are not included. You can zip the generated folder with your OS.
+The app contains no GitHub credentials or authentication integration.
+
+## Pipeline and memory
+
+```text
+OpenCV decoder → bounded ring + job queue → CPU workers → ordered encoder → staged output
+                           ↑ backpressure                  ↓
+                                  latest-frame UI mailbox
+```
+
+A ring slot belongs to one sequence number until the encoder has written it. Workers can
+finish out of order, but the encoder consumes the next sequence only. Holding a slot through
+encoding bounds both decoded and completed frames, even when the earliest frame is slow.
+The ring has 8 slots in the library default; the UI chooses min(16, 2 × workers).
+Condition variables wake all stages on an error or cancellation. Threads are joined before
+their captured state is destroyed.
+
+The converter uses a 256-entry brightness/contrast-to-glyph lookup table and an immutable glyph
+atlas shared by workers. Each worker reuses OpenCV resize/grayscale scratch buffers.
+Frame Mats move between stages; QImage data is implicitly shared for preview/poster.
+Rendered images/text are allocated per frame; this is not an allocation-free renderer.
+The UI mailbox holds only the latest progress frame. FFmpeg's queued stdin is capped at roughly
+256 KiB plus one row. Decoder/codec caches, worker scratch, the poster and preview add a fixed
+amount outside the ring. Memory depends on resolution/settings, not a retained list of all frames.
+
+## Video length
+
+Không có giới hạn cứng theo phút/giờ cho MP4 đầu vào. Thời gian xử lý và dung lượng ổ đĩa
+là giới hạn thực tế; pipeline không giữ toàn bộ video trong RAM. Bản hiện tại đã được đo
+với input dài đến 120 giây, chưa có cam kết cho video dài nhiều giờ. Timeout của encoder
+bảo vệ khi ghi bị kẹt hoặc hoàn tất quá lâu. Giới hạn 15 giây chỉ dành cho GIF preview.
+
+## Tests, demo and benchmarks
+
+```sh
+ctest --test-dir build --output-on-failure
+# Recreate all four assets from an original deterministic 6-second animation:
+bash scripts/generate_preview.sh
+# Actual stage timings as JSON:
+QT_QPA_PLATFORM=offscreen ./build/ascii-benchmark assets/demo-ascii.mp4 build/benchmark.mp4 4 100
+```
+
+PowerShell demo generation: `.\scripts\generate_preview.ps1`.
+The original synthetic demo is still available: [GIF](assets/demo.gif), [MP4](assets/demo-ascii.mp4),
+[poster](assets/preview.png), [source pattern](assets/demo-source.png).
+The C++ generator recreates these four synthetic assets; it does not replace the supplied clip at the top.
+It draws a moving crescent and waves without downloaded media.
+Rendered glyphs can vary with the OS monospace font, so output bytes are not cross-platform deterministic.
+Source animation positions/pixels are deterministic.
+
+Tests cover mapping, brightness/contrast, aspect ratio, ANSI colors, Unicode image paths,
+invalid/missing/empty inputs, a container with no frames, unavailable encoder, output round trips,
+fractional FPS, ordered frames, both profile exports, GIF duration/byte limits, bounded ring occupancy,
+cancellation and both desktop workflows. A Qt timer checks that the UI event loop continues during work.
+CTest writes `build/test-results.txt` and JUnit XML alongside its normal log.
+
+See [benchmark methodology](benchmarks/README.md) and [measured validation](VALIDATION.md).
+Set `ASCII_BUILD_BENCHMARKS=OFF` to omit the optional benchmark/demo target.
+There is no promised conversion speed and no synthetic performance score.
+
+## Current limits
+
+- CPU conversion and software H.264 encoding only; hardware acceleration is not implemented.
+- Output is silent. Audio and subtitles are not copied.
+- MP4 uses the decoder-reported FPS as constant frame rate. Variable-frame-rate timestamps are
+  not preserved; duration can differ for VFR inputs. Tests cover constant/fractional FPS.
+- Preview is live during conversion, then shows the poster; there is no playback timeline.
+- Import support depends on installed codecs. The vcpkg manifest enables JPEG/PNG and video
+  decoding; additional still-image codecs may require additional OpenCV features.
+- Processing is 8-bit SDR. HDR, alpha and color-management metadata are not preserved.
+- OpenCV cannot distinguish every damaged-stream error from EOF. Known early EOF is rejected
+  using advertised frame counts, but streams without trustworthy counts have that limitation.
+- Stop is checked between local decode calls and during encoding/export. A blocked backend read
+  or initial font/codec setup cannot be interrupted immediately.
+- Windows x64 has an unsigned installer with bundled runtime libraries. macOS/Linux installers are not supplied.
+
+## License
+
+[MIT](LICENSE) for project code and the original synthetic demo media.
+The supplied-clip showcase has separate [source notes](assets/readme-demo/README.md);
+the MIT license does not cover its underlying third-party animation. Qt, OpenCV, FFmpeg and system fonts
+retain their own licenses. The Windows binary bundle includes GPL-3.0-or-later FFmpeg components;
+see [packaging and source notices](packaging/README.md) and the notices installed with the app.

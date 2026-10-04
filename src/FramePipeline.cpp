@@ -39,7 +39,9 @@ ConversionResult FramePipeline::run(const QString &input, const QString &output,
     if (!staging.isValid())
         throw std::runtime_error("Cannot create output staging directory.");
     const auto staged = staging.filePath(result.input.video ? "output.mp4" : "output.png");
-    const QSize size = AsciiConverter::outputSize(result.input.width, result.input.height, settings);
+    const QSize size(settings.columns * AsciiConverter::glyphWidth,
+                     AsciiConverter::rowsFor(result.input.width, result.input.height, settings.columns) *
+                         AsciiConverter::glyphHeight);
     const auto atlasStart = Clock::now();
     const AsciiConverter prototype(settings);
     result.metrics.atlasMs = ms(atlasStart);
@@ -184,16 +186,7 @@ ConversionResult FramePipeline::run(const QString &input, const QString &output,
         const auto finishing = Clock::now();
         if (encoder)
             encoder->finish();
-        QString completed = staged;
-        if (encoder && settings.keepAudio) {
-            completed = staging.filePath("with-audio.mp4");
-            // Long audio tracks and faststart copies can exceed the export timeout.
-            // Cancellation stays responsive while this full-length operation runs.
-            runFfmpeg({"-i", staged, "-i", input, "-map", "0:v:0", "-map", "1:a:0?", "-c:v", "copy", "-c:a",
-                       "aac", "-b:a", "192k", "-map_metadata", "-1", "-movflags", "+faststart", completed},
-                      stop, 0);
-        }
-        copyOutput(completed, output);
+        copyOutput(staged, output);
         result.metrics.encodeMs += ms(finishing);
         result.metrics.totalMs = ms(begin);
         if (progress)

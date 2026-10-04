@@ -18,6 +18,3 @@ CMakeUserPresets.json
 *.p12
 .DS_Store
 Thumbs.db
-
-/docker-data/
-__pycache__/

@@ -3,7 +3,7 @@
 #include <QFileInfo>
 #include <QFont>
 #include <QFontDatabase>
-#include <QResource>
+#include <QPainter>
 #include <QStandardPaths>
 #include <algorithm>
 #include <chrono>
@@ -11,20 +11,9 @@
 #include <opencv2/imgproc.hpp>
 #include <stdexcept>
 
-static void initializeFontResources() {
-    Q_INIT_RESOURCE(fonts);
-}
 namespace ascii {
 QFont monospaceFont() {
     static const QFont selected = [] {
-        initializeFontResources();
-        const int bundledId = QFontDatabase::addApplicationFont(":/fonts/mono.ttf");
-        const auto bundled = QFontDatabase::applicationFontFamilies(bundledId);
-        if (!bundled.isEmpty()) {
-            QFont font(bundled.front());
-            font.setPixelSize(14);
-            return font;
-        }
         // Loading the system font explicitly also works with Qt's offscreen platform on Windows.
         for (const auto &folder : QStandardPaths::standardLocations(QStandardPaths::FontsLocation)) {
             const auto path = QDir(folder).filePath("consola.ttf");
@@ -54,16 +43,14 @@ QFont monospaceFont() {
     return selected;
 }
 void Settings::validate() const {
-    if (columns < 8 || columns > 960 || !std::isfinite(brightness) || brightness < -255 || brightness > 255 ||
+    if (columns < 8 || columns > 320 || !std::isfinite(brightness) || brightness < -255 || brightness > 255 ||
         !std::isfinite(contrast) || contrast < 0 || contrast > 4 || charset.empty() || charset.size() > 94 ||
         threads < 1 || threads > 32 || previewFps < 1 || previewFps > 60 || queueCapacity < 1 ||
         queueCapacity > 64 || !foreground.isValid())
         throw std::invalid_argument("Invalid conversion settings.");
-    for (char character : charset) {
-        const auto c = static_cast<unsigned char>(character);
+    for (unsigned char c : charset)
         if (c < 32 || c > 126)
             throw std::invalid_argument("Charset must contain printable ASCII characters only.");
-    }
 }
 int AsciiConverter::rowsFor(int width, int height, int columns) {
     if (width <= 0 || height <= 0 || columns <= 0)
@@ -73,17 +60,7 @@ int AsciiConverter::rowsFor(int width, int height, int columns) {
         throw std::invalid_argument("Frame aspect ratio exceeds the 2048-row safety limit.");
     return std::max(1, static_cast<int>(std::lround(rows)));
 }
-QSize AsciiConverter::outputSize(int width, int height, const Settings &settings) {
-    settings.validate();
-    const int cell = settings.fineDetail ? 4 : glyphWidth;
-    const QSize size(settings.columns * cell, rowsFor(width, height, settings.columns) * cell * 2);
-    if (static_cast<qint64>(size.width()) * size.height() > 33554432)
-        throw std::invalid_argument("Output is too large. Choose fewer characters per line.");
-    return size;
-}
-AsciiConverter::AsciiConverter(Settings settings)
-    : settings_(std::move(settings)), cellWidth_(settings_.fineDetail ? 4 : glyphWidth),
-      cellHeight_(cellWidth_ * 2) {
+AsciiConverter::AsciiConverter(Settings settings) : settings_(std::move(settings)) {
     settings_.validate();
     for (int i = 0; i < 256; ++i) {
         const double value =
@@ -91,14 +68,15 @@ AsciiConverter::AsciiConverter(Settings settings)
         lut_[static_cast<size_t>(i)] =
             static_cast<unsigned char>(value * static_cast<double>(settings_.charset.size() - 1) / 255.0);
     }
-    initializeFontResources();
-    // Pre-rendered ASCII cells keep tiny glyphs identical across Qt/platform font engines.
-    const QImage atlas(settings_.fineDetail ? ":/fonts/atlas-fine.png" : ":/fonts/atlas-classic.png");
-    if (atlas.isNull())
-        throw std::runtime_error("The bundled ASCII glyph atlas is unavailable.");
+    QFont font = monospaceFont();
     for (char c : settings_.charset) {
-        QImage glyph = atlas.copy((c - 32) * cellWidth_, 0, cellWidth_, cellHeight_)
-                           .convertToFormat(QImage::Format_ARGB32);
+        QImage glyph(glyphWidth, glyphHeight, QImage::Format_ARGB32);
+        glyph.fill(Qt::transparent);
+        QPainter painter(&glyph);
+        painter.setFont(font);
+        painter.setPen(Qt::white);
+        painter.drawText(glyph.rect(), Qt::AlignCenter, QString(QChar::fromLatin1(c)));
+        painter.end();
         atlas_.push_back(std::move(glyph));
     }
 }
@@ -117,14 +95,9 @@ RenderedFrame AsciiConverter::convert(const cv::Mat &input) {
         gray_ = small_;
     else
         cv::cvtColor(small_, gray_, small_.channels() == 4 ? cv::COLOR_BGRA2GRAY : cv::COLOR_BGR2GRAY);
-    if (settings_.sharpen) {
-        cv::Mat blurred;
-        cv::GaussianBlur(gray_, blurred, {3, 3}, 0.8);
-        cv::addWeighted(gray_, 1.6, blurred, -0.6, 0, gray_);
-    }
     const auto prepared = Clock::now();
     RenderedFrame result;
-    result.image = QImage(outputSize(input.cols, input.rows, settings_), QImage::Format_RGB888);
+    result.image = QImage(settings_.columns * glyphWidth, rows * glyphHeight, QImage::Format_RGB888);
     if (result.image.isNull())
         throw std::runtime_error("Cannot allocate rendered image; reduce columns.");
     result.text.reserve(static_cast<size_t>((settings_.columns + 1) * rows));
@@ -138,10 +111,10 @@ RenderedFrame AsciiConverter::convert(const cv::Mat &input) {
                 color = QColor(pixel[2], pixel[1], pixel[0]);
             }
             const auto &glyph = atlas_[index];
-            for (int gy = 0; gy < cellHeight_; ++gy) {
-                auto *dst = result.image.scanLine(y * cellHeight_ + gy) + x * cellWidth_ * 3;
+            for (int gy = 0; gy < glyphHeight; ++gy) {
+                auto *dst = result.image.scanLine(y * glyphHeight + gy) + x * glyphWidth * 3;
                 const auto *src = reinterpret_cast<const QRgb *>(glyph.constScanLine(gy));
-                for (int gx = 0; gx < cellWidth_; ++gx) {
+                for (int gx = 0; gx < glyphWidth; ++gx) {
                     const int alpha = qAlpha(src[gx]);
                     dst[gx * 3] = static_cast<uchar>(color.red() * alpha / 255);
                     dst[gx * 3 + 1] = static_cast<uchar>(color.green() * alpha / 255);

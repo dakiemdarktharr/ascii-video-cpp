@@ -1,43 +1,51 @@
-# Packaging and releases
+# Windows installer
 
-`Build and test` builds on Windows x64 and Ubuntu 24.04 x64.
-Each platform runs the functional tests and packages an installer; artifacts from ordinary CI builds are
-smoke builds without downloaded dependency sources and must not be published as releases.
-Docker CI builds and runs the test/runtime/gui targets, verifies a real conversion and the browser desktop.
+The NSIS installer targets Windows 10/11 x64 and installs for the current user. It bundles
+Qt plugins, the recursive PE-import closure of the application and FFmpeg, and license notices.
+It does not change the system PATH. Uninstall deletes its own enumerated files, leaving user files.
+Close the app before upgrading or uninstalling.
 
-## Windows
+## Build
+
+Use MSYS2 MINGW64 with the dependencies in the root README, plus:
 
 ```sh
-python scripts/package_windows.py --build-dir build --output-dir build-package
+pacman -S --needed mingw-w64-x86_64-python mingw-w64-x86_64-nsis
+cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+cmake --build build-release --parallel 4
+ctest --test-dir build-release --output-on-failure
+python scripts/package_windows.py --build-dir build-release --output-dir build-package --prefix "$(cygpath -m /mingw64)"
 ```
 
-Run in MINGW64 after building. The output folder must not already exist. The script recursively resolves
-PE imports, bundles FFmpeg and Qt plugins, records dependency versions/licenses, downloads corresponding
-MSYS2 source packages and build recipes, then produces `Setup.exe`, source archives and checksums.
-The installer is per-user; uninstall enumerates its own files and preserves user-created exports.
+The output directory must not already exist, preventing stale runtime files from entering a release.
+Python is used only for packaging. Installed users need neither Python nor MSYS2.
+
+Test from PowerShell (set the prefix to your MSYS2 installation):
 
 ```powershell
-./scripts/test_installer.ps1 -PackageDir build-package -BuildDir build
+.\scripts\test_installer.ps1 -PackageDir build-package -BuildDir build-release -MingwPrefix C:\msys64\mingw64
 ```
 
-The test installs to a new folder, launches the GUI, checks imported module paths, runs functional tests
-with the installed runtime and a system-only PATH, then uninstalls while preserving a user-owned marker.
-It refuses to run if the app is already registered on the machine. Run this only on a disposable test installation.
+The smoke test requires no existing registered installation of the app. It installs into a fresh
+folder with spaces, removes the development PATH, opens the native Qt window, and runs the full
+conversion/download/export suite against installed dependencies. It then uninstalls and verifies
+that a user-owned marker file survives. Start-Process hides test helper windows.
 
-## Ubuntu
+## Release assets and sources
 
-Configure with `-DCMAKE_INSTALL_PREFIX=/usr`, build, then run `cpack -G DEB` in the build folder.
-CPack uses dpkg-shlibdeps to resolve Qt/OpenCV runtime dependencies; FFmpeg, fonts and Qt platform plugins
-are explicit dependencies. Install the resulting DEB with apt so dependencies are fetched automatically.
-This package targets Ubuntu 24.04 x64. Other distributions can build from source or use Docker.
+Upload `Setup.exe`, `SHA256SUMS.txt`, `runtime-manifest.json`, `application-source.zip` and
+all `dependency-sources-*.zip` files together to the versioned GitHub release. Executables and
+source archives belong in Releases, not Git history. The checksums cover each release asset.
 
-## Publish
+The application source remains MIT-licensed. The Windows binary distribution includes the
+GPL-3.0-or-later MSYS2 FFmpeg build and is distributed under GPL-3.0-or-later. Qt is dynamically
+linked; compatible replacement DLLs and debugging modifications are permitted. Installed notices
+include component licenses and exact source URLs. Dependency source archives include upstream
+sources and the MSYS2 build recipes/patches for the versions actually bundled. Application source
+is captured from tracked and nonignored project files at packaging time; build folders are ignored.
 
-Keep CMake, vcpkg, installer test and script versions in sync. After reviewing and testing the commit, push a
-matching version tag (`v1.2.2` for this release). `Publish installers` validates the tag, rebuilds and tests every
-platform, downloads corresponding dependency sources, computes SHA256 checksums and publishes all artifacts
-only when every job succeeds. Release notes are in `packaging/release-notes.md`.
+`--skip-source-download` is only for CI installation tests, whose installers are not published.
+A public release must include the source archives. The installed manifest records source archive
+SHA-256 values in full release builds. A download failure aborts release packaging.
 
-Application source is MIT. The Windows distribution includes GPL FFmpeg components and their notices,
-source archives, dependency versions and build recipes. Libraries remain dynamically linked. Do not omit the
-corresponding sources when redistributing the installer bundles.
+The binary is currently unsigned. A checksum detects transfer changes but is not a publisher signature.

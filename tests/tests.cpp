@@ -4,24 +4,15 @@
 #include "MainWindow.hpp"
 #include "MediaOutput.hpp"
 #include <QApplication>
-#include <QComboBox>
 #include <QDir>
 #include <QFile>
 #include <QFontInfo>
 #include <QPainter>
 #include <QPushButton>
-#include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimer>
 #include <opencv2/imgproc.hpp>
-
-// Qt 6.3 replaced the exception assertion; retain compatibility with Qt 6.2.
-#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
-#define ASCII_VERIFY_THROWS(exception, ...) QVERIFY_THROWS_EXCEPTION(exception, __VA_ARGS__)
-#else
-#define ASCII_VERIFY_THROWS(exception, ...) QVERIFY_EXCEPTION_THROWN((__VA_ARGS__), exception)
-#endif
 
 class Tests : public QObject {
     Q_OBJECT
@@ -31,8 +22,6 @@ class Tests : public QObject {
     ascii::Settings config() {
         ascii::Settings s;
         s.columns = 24;
-        s.fineDetail = false;
-        s.sharpen = false;
         s.threads = 4;
         s.queueCapacity = 3;
         return s;
@@ -65,10 +54,7 @@ class Tests : public QObject {
         source_ = files_.filePath("source.mp4");
         makeVideo(source_, 16);
     }
-    void monospace() {
-        QCOMPARE(ascii::monospaceFont().family(), QString("DejaVu Sans Mono"));
-        QVERIFY(QFontInfo(ascii::monospaceFont()).fixedPitch());
-    }
+    void monospace() { QVERIFY(QFontInfo(ascii::monospaceFont()).fixedPitch()); }
     void mapping() {
         ascii::Settings s;
         ascii::AsciiConverter converter(s);
@@ -79,7 +65,7 @@ class Tests : public QObject {
         s.charset = "X";
         QCOMPARE(ascii::AsciiConverter(s).map(200), 'X');
         s.charset = "\n";
-        ASCII_VERIFY_THROWS(std::invalid_argument, ascii::AsciiConverter{s});
+        QVERIFY_EXCEPTION_THROWN(ascii::AsciiConverter{s}, std::invalid_argument);
     }
     void brightnessContrast() {
         ascii::Settings s;
@@ -100,77 +86,7 @@ class Tests : public QObject {
         QCOMPARE(ascii::AsciiConverter::rowsFor(1920, 1080, 120), 34);
         QCOMPARE(ascii::AsciiConverter::rowsFor(100, 100, 100), 50);
         QCOMPARE(ascii::AsciiConverter::rowsFor(1000, 1, 8), 1);
-        ASCII_VERIFY_THROWS(std::invalid_argument, ascii::AsciiConverter::rowsFor(0, 100, 100));
-    }
-    void highResolutionText() {
-        ascii::Settings fine;
-        QCOMPARE(ascii::AsciiConverter::outputSize(1920, 1080, fine), QSize(1920, 1080));
-        fine.columns = 960;
-        QCOMPARE(ascii::AsciiConverter::outputSize(1920, 1080, fine), QSize(3840, 2160));
-        fine.columns = 961;
-        ASCII_VERIFY_THROWS(std::invalid_argument, fine.validate());
-        fine.columns = 480;
-        fine.sharpen = false;
-        cv::Mat letters(1080, 1920, CV_8UC3, cv::Scalar(0, 0, 0));
-        cv::putText(letters, "Readable subtitles 123", {180, 500}, cv::FONT_HERSHEY_SIMPLEX, 1.5,
-                    {255, 255, 255}, 3, cv::LINE_AA);
-        auto measure = [&](const ascii::Settings &settings) {
-            const auto rendered = ascii::AsciiConverter(settings).convert(letters);
-            // Recover the spatial envelope of the glyphs, then compare it to subtitle strokes.
-            cv::Mat rgb(rendered.image.height(), rendered.image.width(), CV_8UC3,
-                        const_cast<uchar *>(rendered.image.constBits()),
-                        static_cast<size_t>(rendered.image.bytesPerLine()));
-            cv::Mat gray, resized;
-            cv::cvtColor(rgb, gray, cv::COLOR_RGB2GRAY);
-            cv::resize(gray, resized, letters.size());
-            cv::GaussianBlur(resized, resized, {15, 15}, 3);
-            cv::Mat mask;
-            cv::threshold(resized, mask, 5, 255, cv::THRESH_BINARY);
-            cv::Mat original;
-            cv::cvtColor(letters, original, cv::COLOR_BGR2GRAY);
-            cv::threshold(original, original, 60, 255, cv::THRESH_BINARY);
-            cv::Mat intersection, combined;
-            cv::bitwise_and(mask, original, intersection);
-            cv::bitwise_or(mask, original, combined);
-            return static_cast<double>(cv::countNonZero(intersection)) / cv::countNonZero(combined);
-        };
-        auto old = fine;
-        old.columns = 100;
-        old.fineDetail = false;
-        // OpenCV 4 and 5 resize the coarse reference slightly differently.
-        // Require both better stroke recovery and a useful absolute overlap.
-        const auto fineOverlap = measure(fine), oldOverlap = measure(old);
-        QVERIFY2(
-            fineOverlap > oldOverlap * 1.25 && fineOverlap > 0.45,
-            qPrintable(QString("Subtitle stroke overlap: fine %1, old %2").arg(fineOverlap).arg(oldOverlap)));
-        const auto demo = qEnvironmentVariable("ASCII_TEXT_DEMO_DIR");
-        if (!demo.isEmpty()) {
-            QDir().mkpath(demo);
-            cv::Mat rgb;
-            cv::cvtColor(letters, rgb, cv::COLOR_BGR2RGB);
-            ascii::saveImage(
-                QImage(rgb.data, rgb.cols, rgb.rows, static_cast<qsizetype>(rgb.step), QImage::Format_RGB888),
-                demo + "/source.png");
-            ascii::saveImage(ascii::AsciiConverter(fine).convert(letters).image, demo + "/fine.png");
-            ascii::saveImage(ascii::AsciiConverter(old).convert(letters).image, demo + "/old.png");
-        }
-    }
-    void audioPreservation() {
-        const auto input = files_.filePath("sound.mp4");
-        ascii::runFfmpeg({"-f", "lavfi", "-i", "color=size=96x64:rate=24:duration=0.5", "-f", "lavfi", "-i",
-                          "sine=frequency=440:duration=0.5", "-c:v", "libx264", "-c:a", "aac", "-shortest",
-                          input},
-                         stop_);
-        const auto output = files_.filePath("sound-ascii.mp4");
-        ascii::FramePipeline{}.run(input, output, config(), stop_);
-        // A required audio map fails if the output has lost sound.
-        ascii::runFfmpeg({"-i", output, "-map", "0:a:0", "-f", "null", "-"}, stop_);
-        auto muted = config();
-        muted.keepAudio = false;
-        const auto silent = files_.filePath("silent-ascii.mp4");
-        ascii::FramePipeline{}.run(input, silent, muted, stop_);
-        ASCII_VERIFY_THROWS(std::runtime_error,
-                            ascii::runFfmpeg({"-i", silent, "-map", "0:a:0", "-f", "null", "-"}, stop_));
+        QVERIFY_EXCEPTION_THROWN(ascii::AsciiConverter::rowsFor(0, 100, 100), std::invalid_argument);
     }
     void terminalColor() {
         cv::Mat frame(16, 16, CV_8UC3, cv::Scalar(0, 0, 255));
@@ -189,27 +105,28 @@ class Tests : public QObject {
         QCOMPARE(QImage(copy), QImage(result.output));
     }
     void invalidInputs() {
-        ASCII_VERIFY_THROWS(std::runtime_error, ascii::MediaInput(files_.filePath("missing.mp4")));
+        QVERIFY_EXCEPTION_THROWN(ascii::MediaInput(files_.filePath("missing.mp4")), std::runtime_error);
         QFile empty(files_.filePath("empty.mp4"));
         QVERIFY(empty.open(QIODevice::WriteOnly));
         empty.close();
-        ASCII_VERIFY_THROWS(std::runtime_error, ascii::MediaInput(empty.fileName()));
+        QVERIFY_EXCEPTION_THROWN(ascii::MediaInput(empty.fileName()), std::runtime_error);
         QFile corrupt(files_.filePath("corrupt.png"));
         QVERIFY(corrupt.open(QIODevice::WriteOnly));
         corrupt.write("invalid");
         corrupt.close();
-        ASCII_VERIFY_THROWS(std::runtime_error, ascii::MediaInput(corrupt.fileName()));
+        QVERIFY_EXCEPTION_THROWN(ascii::MediaInput(corrupt.fileName()), std::runtime_error);
         const auto noFrames = files_.filePath("no-frames.mp4");
         ascii::runFfmpeg(
             {"-f", "lavfi", "-i", "color=size=96x64:rate=24", "-frames:v", "0", "-c:v", "libx264", noFrames},
             stop_);
         QVERIFY(QFileInfo(noFrames).size() > 0);
-        ASCII_VERIFY_THROWS(std::runtime_error, ascii::MediaInput{noFrames});
+        QVERIFY_EXCEPTION_THROWN(ascii::MediaInput{noFrames}, std::runtime_error);
     }
     void missingCodec() {
         const auto output = files_.filePath("bad-codec.mp4");
-        ASCII_VERIFY_THROWS(std::runtime_error, ascii::FramePipeline{}.run(source_, output, config(), stop_,
-                                                                           {}, "encoder_does_not_exist"));
+        QVERIFY_EXCEPTION_THROWN(
+            ascii::FramePipeline{}.run(source_, output, config(), stop_, {}, "encoder_does_not_exist"),
+            std::runtime_error);
         QVERIFY(!QFileInfo::exists(output));
     }
     void videoFpsOrderDownload() {
@@ -264,8 +181,8 @@ class Tests : public QObject {
         QFile markdown(folder + "/profile-snippet.md");
         QVERIFY(markdown.open(QIODevice::ReadOnly));
         QVERIFY(markdown.readAll().contains("YOUR_GITHUB_USERNAME/YOUR_REPOSITORY"));
-        ASCII_VERIFY_THROWS(std::runtime_error,
-                            ascii::GitHubExporter::create(image, imageRoot.path(), options, stop_));
+        QVERIFY_EXCEPTION_THROWN(ascii::GitHubExporter::create(image, imageRoot.path(), options, stop_),
+                                 std::runtime_error);
         auto video = convertVideo("profile-video.mp4");
         QTemporaryDir videoRoot;
         options.previewSeconds = 1;
@@ -282,8 +199,8 @@ class Tests : public QObject {
         QVERIFY(snippet.readAll().contains("example/ascii-video-cpp/raw/HEAD"));
         QTemporaryDir smallRoot;
         options.maxGifBytes = 1024;
-        ASCII_VERIFY_THROWS(std::runtime_error,
-                            ascii::GitHubExporter::create(video, smallRoot.path(), options, stop_));
+        QVERIFY_EXCEPTION_THROWN(ascii::GitHubExporter::create(video, smallRoot.path(), options, stop_),
+                                 std::runtime_error);
         QVERIFY(!QFileInfo::exists(smallRoot.filePath("github-export")));
     }
     void boundedMemoryAndCancellation() {
@@ -302,9 +219,9 @@ class Tests : public QObject {
         ascii::MediaInput preview(folder + "/ascii-profile.gif");
         QVERIFY(preview.info().duration <= 1.1);
         const auto cancelled = files_.filePath("cancelled.mp4");
-        ASCII_VERIFY_THROWS(std::runtime_error,
-                            ascii::FramePipeline{}.run(longSource, cancelled, config(), stop_,
-                                                       [&](const auto &) { stop_ = true; }));
+        QVERIFY_EXCEPTION_THROWN(ascii::FramePipeline{}.run(longSource, cancelled, config(), stop_,
+                                                            [&](const auto &) { stop_ = true; }),
+                                 std::runtime_error);
         stop_ = false;
         QVERIFY(!QFileInfo::exists(cancelled));
     }
@@ -315,16 +232,9 @@ class Tests : public QObject {
         auto *download = window.findChild<QPushButton *>("downloadButton");
         auto *github = window.findChild<QPushButton *>("githubButton");
         QVERIFY(convert && download && github);
-        QCOMPARE(convert->text(), QString("Create ASCII video"));
+        QVERIFY(QFontInfo(convert->font()).fixedPitch());
         QVERIFY(!convert->isEnabled());
         QVERIFY(!download->isEnabled());
-        auto *resolution = window.findChild<QComboBox *>("resolutionCombo");
-        auto *columns = window.findChild<QSpinBox *>("columnsSpin");
-        QVERIFY(resolution && columns);
-        resolution->setCurrentIndex(2);
-        QCOMPARE(columns->value(), 960);
-        resolution->setCurrentIndex(0);
-        QCOMPARE(columns->value(), 320);
         int ticks = 0;
         QTimer heartbeat;
         connect(&heartbeat, &QTimer::timeout, [&] { ++ticks; });
@@ -333,8 +243,6 @@ class Tests : public QObject {
             window.importPath(input);
             QTRY_VERIFY_WITH_TIMEOUT(!window.busy(), 15000);
             QVERIFY2(convert->isEnabled(), qPrintable(window.statusText()));
-            QVERIFY(!window.converted());
-            QVERIFY(window.statusText().contains("Preview ready"));
             QTest::mouseClick(convert, Qt::LeftButton);
             QVERIFY(!download->isEnabled());
             QTRY_VERIFY_WITH_TIMEOUT(!window.busy(), 30000);
@@ -361,7 +269,7 @@ class Tests : public QObject {
             window.startConversion();
             QTRY_VERIFY_WITH_TIMEOUT(!window.busy(), 30000);
             QVERIFY2(window.converted(), qPrintable(window.statusText()));
-            QVERIFY(window.grab().save("ui-preview.png", "PNG"));
+            QVERIFY(window.grab().scaledToWidth(900).save("ui-preview.jpg", "JPG", 80));
         }
     }
 };

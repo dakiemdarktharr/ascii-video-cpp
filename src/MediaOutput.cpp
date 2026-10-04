@@ -38,7 +38,7 @@ void runFfmpeg(const QStringList &arguments, std::atomic_bool &stop, int timeout
     while (process.state() != QProcess::NotRunning) {
         process.waitForFinished(50);
         diagnostic = (diagnostic + process.readAll()).right(8192);
-        if (stop || (timeoutMs > 0 && timer.elapsed() > timeoutMs)) {
+        if (stop || timer.elapsed() > timeoutMs) {
             process.kill();
             process.waitForFinished(3000);
             throw std::runtime_error(stop ? "Stopped." : "FFmpeg timed out.");
@@ -91,7 +91,7 @@ MediaOutput::MediaOutput(const QString &path, QSize size, double fps, std::atomi
                      "-c:v",
                      codec};
     if (codec == "libx264")
-        args << "-preset" << "veryfast" << "-crf" << "16";
+        args << "-preset" << "veryfast" << "-crf" << "20";
     args << "-threads" << "2" << "-pix_fmt" << "yuv420p" << "-movflags" << "+faststart" << path;
     process_.start(ffmpegExecutable(), args);
     if (!process_.waitForStarted(10000))
