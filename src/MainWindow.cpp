@@ -42,6 +42,7 @@ MainWindow::MainWindow() {
         if (QFontDatabase::families().contains(QString::fromLatin1(family))) {
             QFont font(QString::fromLatin1(family));
             font.setPixelSize(14);
+            QApplication::setFont(font);
             setFont(font);
             break;
         }

@@ -97,6 +97,7 @@ def main():
                 raise RuntimeError(f"Unresolved dependency {dll} imported by {source.name}")
     (stage / "qt.conf").write_text("[Paths]\nPrefix=.\nPlugins=plugins\n", encoding="utf-8")
     shutil.copy2(root / "LICENSE", stage / "LICENSE.txt")
+    shutil.copy2(root / "assets/fonts/LICENSE-DejaVu.txt", stage / "LICENSE-DejaVu.txt")
     shutil.copy2(root / "README.md", stage / "README.md")
     license_dir = stage / "licenses"
     license_dir.mkdir()

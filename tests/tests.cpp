@@ -58,7 +58,10 @@ class Tests : public QObject {
         source_ = files_.filePath("source.mp4");
         makeVideo(source_, 16);
     }
-    void monospace() { QVERIFY(QFontInfo(ascii::monospaceFont()).fixedPitch()); }
+    void monospace() {
+        QCOMPARE(ascii::monospaceFont().family(), QString("DejaVu Sans Mono"));
+        QVERIFY(QFontInfo(ascii::monospaceFont()).fixedPitch());
+    }
     void mapping() {
         ascii::Settings s;
         ascii::AsciiConverter converter(s);
@@ -348,7 +351,7 @@ class Tests : public QObject {
             window.startConversion();
             QTRY_VERIFY_WITH_TIMEOUT(!window.busy(), 30000);
             QVERIFY2(window.converted(), qPrintable(window.statusText()));
-            QVERIFY(window.grab().scaledToWidth(900).save("ui-preview.jpg", "JPG", 80));
+            QVERIFY(window.grab().save("ui-preview.png", "PNG"));
         }
     }
 };

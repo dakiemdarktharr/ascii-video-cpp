@@ -63,6 +63,7 @@ def main():
     resources = bundle / "Contents/Resources"
     resources.mkdir(exist_ok=True)
     shutil.copy2(root / "LICENSE", resources / "LICENSE.txt")
+    shutil.copy2(root / "assets/fonts/LICENSE-DejaVu.txt", resources / "LICENSE-DejaVu.txt")
     records = json.loads(run("brew", "info", "--json=v2", *sorted(owners)))["formulae"]
     for record in records:
         (resources / (record["name"] + "-formula.rb")).write_text(run("brew", "cat", record["name"]))

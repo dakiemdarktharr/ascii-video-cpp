@@ -4,6 +4,7 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QPainter>
+#include <QResource>
 #include <QStandardPaths>
 #include <algorithm>
 #include <chrono>
@@ -11,9 +12,20 @@
 #include <opencv2/imgproc.hpp>
 #include <stdexcept>
 
+static void initializeFontResources() {
+    Q_INIT_RESOURCE(fonts);
+}
 namespace ascii {
 QFont monospaceFont() {
     static const QFont selected = [] {
+        initializeFontResources();
+        const int bundledId = QFontDatabase::addApplicationFont(":/fonts/mono.ttf");
+        const auto bundled = QFontDatabase::applicationFontFamilies(bundledId);
+        if (!bundled.isEmpty()) {
+            QFont font(bundled.front());
+            font.setPixelSize(14);
+            return font;
+        }
         // Loading the system font explicitly also works with Qt's offscreen platform on Windows.
         for (const auto &folder : QStandardPaths::standardLocations(QStandardPaths::FontsLocation)) {
             const auto path = QDir(folder).filePath("consola.ttf");
@@ -48,9 +60,11 @@ void Settings::validate() const {
         threads < 1 || threads > 32 || previewFps < 1 || previewFps > 60 || queueCapacity < 1 ||
         queueCapacity > 64 || !foreground.isValid())
         throw std::invalid_argument("Invalid conversion settings.");
-    for (unsigned char c : charset)
+    for (char character : charset) {
+        const auto c = static_cast<unsigned char>(character);
         if (c < 32 || c > 126)
             throw std::invalid_argument("Charset must contain printable ASCII characters only.");
+    }
 }
 int AsciiConverter::rowsFor(int width, int height, int columns) {
     if (width <= 0 || height <= 0 || columns <= 0)

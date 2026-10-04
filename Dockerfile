@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 10001 app
 COPY --from=build /build/ascii-video-cpp /usr/local/bin/ascii-video-cpp
+COPY LICENSE assets/fonts/LICENSE-DejaVu.txt /usr/share/doc/ascii-video/
 USER app
 WORKDIR /data
 ENTRYPOINT ["ascii-video-cpp"]

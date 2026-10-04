@@ -6,7 +6,7 @@ Convert MP4 videos and images into pure ASCII character art, with a desktop app 
 Full HD output, fine characters and edge enhancement help retain subtitles and small text.
 The saved MP4 keeps the original sound by default.
 
-![Desktop app](assets/ui-preview.jpg)
+![Desktop app](assets/ui-preview.png)
 
 ## Install
 
