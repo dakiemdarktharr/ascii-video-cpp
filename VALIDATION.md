@@ -18,13 +18,19 @@ Checks on 2026-10-05 (Asia/Saigon), Windows 11 x64. The previous version's recor
   to overwrite an existing v1.1.0 user installation; installation/uninstallation is tested on CI runners.
 - clang-format, Python compilation and shell syntax checks passed. The generated UI screenshot was reviewed.
 
-GitHub Actions builds and tests Windows, Ubuntu and both Mac architectures and verifies installer runtimes.
+[Installer preflight on GitHub Actions](https://github.com/dakiemdarktharr/ascii-video-cpp/actions/runs/37240529683)
+passed all five jobs: Windows, Ubuntu, both Mac architectures and Docker. Windows installation/uninstallation,
+the installed DEB and both isolated Mac runtimes passed. All native platforms passed the functional tests.
 Docker tests build and run the test/runtime/gui targets, including an actual conversion and browser-desktop health.
-Current run results are linked in the release and repository Actions tab; failed runs remain available for diagnosis.
+The release workflow repeats these checks with full dependency sources before publishing. Source availability
+was also checked for all 98 unique Windows dependency archives before release. Failed runs remain available
+in the repository Actions tab for diagnosis.
 The local machine does not have Docker or macOS, so those checks run on GitHub-hosted runners.
 
 The audit found and fixed loss of audio, insufficient default sampling, missing first-frame previews,
 platform font differences, macOS signedness warnings and a deprecated assertion in newer Qt Test.
+Mac packaging now relocates every bundled import, removes duplicate runtime search paths and signs nested
+libraries before the app. Full-length audio processing has no fixed two-minute timeout and remains cancellable.
 ASCII retains the visual shape of text; it cannot guarantee recovery of tiny/blurred text. Variable frame
 rate timestamps are represented by nominal FPS. Native file-picker gestures and third-party player
 playback are not covered by automated controller tests. Installers have no trusted code-signing certificate.

@@ -152,11 +152,20 @@ def main():
                 owners.add(original.resolve().relative_to(cellar).parts[0])
     records = json.loads(run("brew", "info", "--json=v2", *sorted(owners)))["formulae"]
     for record in records:
-        recipe = Path(run("brew", "--prefix", record["name"]).strip()) / ".brew" / (record["name"] + ".rb")
+        installed_prefix = Path(run("brew", "--prefix", record["name"]).strip())
+        recipe = installed_prefix / ".brew" / (record["name"] + ".rb")
         if recipe.is_file():
             shutil.copy2(recipe, resources / recipe.name)
         else:
             (resources / (record["name"] + "-formula.rb")).write_text(run("brew", "cat", record["name"]))
+        for document in installed_prefix.iterdir():
+            if re.match(r"^(LICENSE|COPYING|COPYRIGHT|NOTICE)", document.name, re.IGNORECASE):
+                target = resources / "licenses" / record["name"] / document.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if document.is_dir():
+                    shutil.copytree(document, target)
+                else:
+                    shutil.copy2(document, target)
     (resources / "runtime-manifest.json").write_text(json.dumps(records, indent=2) + "\n")
     shutil.copy2(resources / "runtime-manifest.json", output / f"macos-{architecture}-runtime-manifest.json")
     (resources / "THIRD-PARTY-NOTICES.txt").write_text(
@@ -179,17 +188,24 @@ def main():
             stable = record["urls"]["stable"]
             if not stable:
                 raise RuntimeError(f"No stable sources for {record['name']}")
-            destination = sources / (record["name"] + "-" + Path(stable["url"].split("?", 1)[0]).name)
-            for attempt in range(3):
-                try:
-                    with urllib.request.urlopen(stable["url"], timeout=60) as response, destination.open("wb") as target:
-                        shutil.copyfileobj(response, target)
-                    if stable.get("checksum") and checksum(destination) != stable["checksum"]:
-                        raise RuntimeError(f"Source checksum mismatch: {record['name']}")
-                    return
-                except Exception:
-                    if attempt == 2:
-                        raise
+            downloads = [(record["name"] + "-" + Path(stable["url"].split("?", 1)[0]).name,
+                          stable["url"], stable.get("checksum"))]
+            for index, patch in enumerate(record.get("patches", []), 1):
+                if patch.get("url"):
+                    downloads.append((f"{record['name']}-patch-{index}.patch", patch["url"], patch.get("sha256")))
+            for name, url, expected in downloads:
+                destination = sources / name
+                print("Source:", name, flush=True)
+                for attempt in range(3):
+                    try:
+                        with urllib.request.urlopen(url, timeout=60) as response, destination.open("wb") as target:
+                            shutil.copyfileobj(response, target)
+                        if expected and checksum(destination) != expected:
+                            raise RuntimeError(f"Source checksum mismatch: {name}")
+                        break
+                    except Exception:
+                        if attempt == 2:
+                            raise
         with ThreadPoolExecutor(max_workers=4) as pool:
             list(pool.map(fetch, records))
         part, size, archive = 0, 0, None

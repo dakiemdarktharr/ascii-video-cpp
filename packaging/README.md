@@ -39,7 +39,8 @@ python3 scripts/package_macos.py --build-dir build --output-dir build-package
 
 Requires Homebrew Qt, OpenCV, FFmpeg and dylibbundler. Qt's macdeployqt deploys frameworks/plugins;
 dylibbundler resolves native libraries for both the app and FFmpeg. The script rejects leaked Homebrew install
-names, adds an ad-hoc signature, writes runtime provenance and source recipes, downloads corresponding sources,
+names, adds an ad-hoc signature, writes runtime provenance, licenses and source recipes, downloads corresponding
+sources and formula patches with checksum verification,
 and creates a DMG with an Applications shortcut. CI verifies signatures and the DMG, then converts a video using
 only the bundled runtime and a system-only PATH. Intel and Apple Silicon builds are separate.
 Production Developer ID signing/notarization requires the project's own Apple credentials; these are not configured.
